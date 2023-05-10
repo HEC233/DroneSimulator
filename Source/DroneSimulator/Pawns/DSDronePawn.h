@@ -83,6 +83,12 @@ private:
 	TArray<TObjectPtr<AActor>> TargetActorList;
 	int8 CurrentTargetIndex;
 
+	// SaveGame
+private:
+	UFUNCTION()
+	class UDSSaveGame* LoadGame();
+
+	
 	// movment functions
 private:
 	void MoveDrone(float DeltaTime);

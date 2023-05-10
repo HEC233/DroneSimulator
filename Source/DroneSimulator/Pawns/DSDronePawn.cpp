@@ -13,8 +13,10 @@
 #include "Components/SceneCaptureComponent2D.h"
 #include "ImageUtils.h"
 #include "EngineUtils.h"
+#include "DroneSimulator/DSSaveGame.h"
 #include "HAL/FileManager.h"
 #include "HAL/FileManagerGeneric.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 ADSDronePawn::ADSDronePawn()
@@ -191,6 +193,12 @@ void ADSDronePawn::ChangeTarget()
 		CurrentTargetIndex = (CurrentTargetIndex + 1) % TargetActorList.Num();
 		TargetActor = TargetActorList[CurrentTargetIndex];
 	}
+}
+
+UDSSaveGame* ADSDronePawn::LoadGame()
+{
+	const auto SaveSlot = Cast<UDSSaveGame>(UGameplayStatics::LoadGameFromSlot("SaveSetting",0));
+	return SaveSlot;
 }
 
 void ADSDronePawn::MoveDrone(float DeltaTime)

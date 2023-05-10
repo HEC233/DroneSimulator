@@ -76,3 +76,4 @@ DerivedDataCache/*
 # Content except cpp generated
 Content/*
 !Content/DroneSimulator
+!Content/UI
