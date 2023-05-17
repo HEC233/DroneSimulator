@@ -4,7 +4,6 @@
 #include "DSDronePawn.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Math/UnrealMathUtility.h"
 #include "InputMappingContext.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -17,6 +16,10 @@
 #include "HAL/FileManager.h"
 #include "HAL/FileManagerGeneric.h"
 #include "Kismet/GameplayStatics.h"
+#include "Math/UnrealMathUtility.h"
+#include "Math/NumericLimits.h"
+#include "Math/TranslationMatrix.h"
+#include "Engine/LocalPlayer.h"
 
 // Sets default values
 ADSDronePawn::ADSDronePawn()
@@ -69,6 +72,7 @@ ADSDronePawn::ADSDronePawn()
 	SceneCapture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCapture2D"));
 	SceneCapture->SetupAttachment(RootComponent);
 	SceneCapture->SetWorldLocation(FVector(0.f, 0.f, -15.f));
+	SceneCapture->TextureTarget = RenderTarget;
 
 	RotationRadius = 10000.f;
 	DroneSpeed = 1000.f;
@@ -85,16 +89,28 @@ void ADSDronePawn::BeginPlay()
 		Subsystem->AddMappingContext(DefaultMappingContext, 0);
 	}
 
+	UDSSaveGame* DroneData = LoadGame();
+
 	CenterPosition = GetActorLocation();
 
+	if (DroneData != nullptr)
+	{
+		if (DroneData->CurrentTarget != nullptr)
+		{
+			CenterPosition = DroneData->CurrentTarget->GetActorLocation() + FVector(0, 0, DroneData->CurrentHeight);
+		}
+
+		RotationRadius = DroneData->CurrentRadius;
+		DroneSpeed = DroneData->CurrentMoveSpeed;
+		SceneCapture->FOVAngle = DroneData->CurrentFOV;
+
+		CaptureSpeedPerMinute = DroneData->CurrentCaptureSpeed;
+	}
+
 	UpdateDroneSpeed();
+	CurrentCaptureCount = 0;
 
 	CurrentRotationRate = 0.0f;
-
-	if (RenderTarget)
-	{
-		SceneCapture->TextureTarget = RenderTarget;
-	}
 
 	static FName Tag(TEXT("DroneTarget"));
 	if (TargetActor == nullptr)
@@ -121,6 +137,19 @@ void ADSDronePawn::Tick(float DeltaTime)
 
 	MoveDrone(DeltaTime);
 	LookCamera(TargetActor);
+
+	if (CurrentCaptureCount < MaxCaptureCount)
+	{
+		TimeRecord += DeltaTime;
+
+		if (TimeRecord <= 60.0f / CaptureSpeedPerMinute)
+		{
+			TakeScreenShot();
+
+			TimeRecord -= 60.0f / CaptureSpeedPerMinute;
+			CurrentCaptureCount++;
+		}
+	}
 }
 
 // Called to bind functionality to input
@@ -136,17 +165,23 @@ void ADSDronePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 void ADSDronePawn::TakeScreenShot()
 {
-	static int8 ScreenShotCount = 0;
-	UE_LOG(LogTemp, Log, TEXT("Take Screen shot here"));
-
-	if (RenderTarget == nullptr)
+	if (RenderTarget == nullptr || TargetActor == nullptr)
 	{
 		return;
 	}
 
-	FString FilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("TestImage%d.png"), ScreenShotCount++));
-	FPaths::MakeStandardFilename(FilePath);
-	FArchive* RawFileWriterAr = IFileManager::Get().CreateFileWriter(*FilePath);
+	const FDateTime CurrentTime = FDateTime::UtcNow();
+	const FString TimeString = CurrentTime.ToString(TEXT("%Y.%m.%d-%H.%M.%S"));
+	const FString TargetName = TargetActor->GetActorLabel();
+	
+	FString ImageFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("%s Image - %s.png"), *TargetName, *TimeString));
+	FString TextFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("%s Image - %s.txt"), *TargetName, *TimeString));
+	FPaths::MakeStandardFilename(ImageFilePath);
+	FPaths::MakeStandardFilename(TextFilePath);
+
+	SceneCapture->CaptureScene();
+
+	FArchive* RawFileWriterAr = IFileManager::Get().CreateFileWriter(*ImageFilePath);
 	if (RawFileWriterAr == nullptr)
 	{
 		UE_LOG(LogTemp, Log, TEXT("Problem Occured"));
@@ -155,25 +190,31 @@ void ADSDronePawn::TakeScreenShot()
 	bool ImageSavedOK = FImageUtils::ExportRenderTarget2DAsPNG(RenderTarget, *RawFileWriterAr);
 	RawFileWriterAr->Close();
 
-	/*FTextureRenderTargetResource* Resource = RenderTarget->GameThread_GetRenderTargetResource();
-	FReadSurfaceDataFlags readPixelFlags(RCM_UNorm);
+	FVector2f Min, Max;
+	CalculateNDCMinMax(Min, Max);
 
-	TArray<FColor> OutBMP;
-	OutBMP.AddUninitialized(RenderTarget->GetSurfaceWidth() * RenderTarget->GetSurfaceHeight());
-	Resource->ReadPixels(OutBMP, readPixelFlags);
+	Min = (Min / 2) + FVector2f(0.5f, 0.5f);
+	Max = (Max / 2) + FVector2f(0.5f, 0.5f);
 
-	for (FColor& color : OutBMP)
-	{
-		color.A = 255;
-	}
+	Min.X *= RenderTarget->SizeX;
+	Max.X *= RenderTarget->SizeX;
+	Min.Y *= RenderTarget->SizeY;
+	Max.Y *= RenderTarget->SizeY;
+	Min.Y = RenderTarget->SizeY - Min.Y;
+	Max.Y = RenderTarget->SizeY - Max.Y;
 
-	FIntPoint DestSize(RenderTarget->GetSurfaceWidth(), RenderTarget->GetSurfaceHeight());
-	TArray<uint8> CompressedBitmap;
-	FImageUtils::CompressImageArray(DestSize.X, DestSize.Y, OutBMP, CompressedBitmap);
+	float SwapTemp = Min.Y;
+	Min.Y = Max.Y;
+	Max.Y = SwapTemp;
 
-	FString FullPath = FPaths::Combine("C:\\", "test.png");
+	/*FVector2f Center = (Min + Max) / 2.0f;
+	Min = Center + (Min - Center) * BoxSizeMultiplier;
+	Max = Center + (Max - Center) * BoxSizeMultiplier;*/
 
-	bool ImageSavedOK = FFileHelper::SaveArrayToFile(CompressedBitmap, *FullPath);*/
+	UE_LOG(LogTemp, Log, TEXT("Min: %s, Max: %s"), *Min.ToString(), *Max.ToString());
+	FString LabelingText = FString::Printf(TEXT("%s,%d,%d,%d,%d"), *TargetName, 
+		FMath::FloorToInt(Min.X), FMath::FloorToInt(Min.Y), FMath::CeilToInt(Max.X - Min.X), FMath::CeilToInt(Max.Y - Min.Y));
+	FFileHelper::SaveStringToFile(*LabelingText, *TextFilePath);
 
 	if (ImageSavedOK)
 	{
@@ -193,6 +234,81 @@ void ADSDronePawn::ChangeTarget()
 		CurrentTargetIndex = (CurrentTargetIndex + 1) % TargetActorList.Num();
 		TargetActor = TargetActorList[CurrentTargetIndex];
 	}
+}
+
+void ADSDronePawn::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax)
+{
+	if (TargetActor == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Target not exist!!!"));
+		return;
+	}
+
+	OutMin = FVector2f(TNumericLimits<float>::Max(), TNumericLimits<float>::Max());
+	OutMax = FVector2f(TNumericLimits<float>::Min(), TNumericLimits<float>::Min());
+
+	TArray<UActorComponent*> StaticMeshComponents;
+	TArray<AActor*> AttachedActors;
+
+	TargetActor->GetAttachedActors(AttachedActors, true, true);
+
+	for (AActor* Actor : AttachedActors)
+	{
+		StaticMeshComponents += Actor->GetComponentsByClass(UStaticMeshComponent::StaticClass());
+	}
+
+	//APlayerController* PlayerController = CastChecked<APlayerController>(GetController());
+	//ULocalPlayer* const LocalPlayer = PlayerController->GetLocalPlayer();
+
+	//FSceneViewProjectionData ProjectionData;
+	//if (LocalPlayer->GetProjectionData(LocalPlayer->ViewportClient->Viewport, /*out*/ ProjectionData))
+	//{
+	//	ViewProjectionMatrix = ProjectionData.ComputeViewProjectionMatrix();
+	//}
+
+	FMatrix ViewProjectionMatrix = FMatrix::Identity;
+	const FTransform SceneCaptureTransform = SceneCapture->GetComponentTransform();
+	FMinimalViewInfo ViewInfo;
+	SceneCapture->GetCameraView(0.0f, ViewInfo);
+	const FMatrix ViewMatrix = FTranslationMatrix(-SceneCaptureTransform.GetLocation()) * FInverseRotationMatrix(SceneCaptureTransform.Rotator()) * FMatrix(
+		FPlane(0, 0, 1, 0),
+		FPlane(1, 0, 0, 0),
+		FPlane(0, 1, 0, 0),
+		FPlane(0, 0, 0, 1));
+	const FMatrix ProjectionMatrix = ViewInfo.CalculateProjectionMatrix();
+	ViewProjectionMatrix = ViewMatrix * ProjectionMatrix;
+
+	for (UActorComponent* ActorComponent : StaticMeshComponents)
+	{
+		UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(ActorComponent);
+
+		FBox BoundingBox = StaticMeshComp->GetStaticMesh()->GetBoundingBox();
+
+		TArray<FVector> Points;
+		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Min.X, BoundingBox.Min.Y, BoundingBox.Min.Z)));
+		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Min.X, BoundingBox.Min.Y, BoundingBox.Max.Z)));
+		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Min.X, BoundingBox.Max.Y, BoundingBox.Min.Z)));
+		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Min.X, BoundingBox.Max.Y, BoundingBox.Max.Z)));
+		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Max.X, BoundingBox.Min.Y, BoundingBox.Min.Z)));
+		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Max.X, BoundingBox.Min.Y, BoundingBox.Max.Z)));
+		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Max.X, BoundingBox.Max.Y, BoundingBox.Min.Z)));
+		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Max.X, BoundingBox.Max.Y, BoundingBox.Max.Z)));
+
+		for (FVector& Point : Points)
+		{
+			FVector4 ClipCoordinate = ViewProjectionMatrix.TransformPosition(Point);
+			FVector NDCCoordinate = FVector(ClipCoordinate.X, ClipCoordinate.Y, ClipCoordinate.Z) / ClipCoordinate.W;
+
+			OutMin.X = FMath::Min(NDCCoordinate.X, OutMin.X);
+			OutMin.Y = FMath::Min(NDCCoordinate.Y, OutMin.Y);
+
+			OutMax.X = FMath::Max(NDCCoordinate.X, OutMax.X);
+			OutMax.Y = FMath::Max(NDCCoordinate.Y, OutMax.Y);
+		}
+	}
+
+	//OutMin.Y /= LocalPlayer->ViewportClient->Viewport->GetDesiredAspectRatio();
+	//OutMax.Y /= LocalPlayer->ViewportClient->Viewport->GetDesiredAspectRatio();
 }
 
 UDSSaveGame* ADSDronePawn::LoadGame()

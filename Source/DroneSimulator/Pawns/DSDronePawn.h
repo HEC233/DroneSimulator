@@ -30,6 +30,7 @@ public:
 protected:
 	void TakeScreenShot();
 	void ChangeTarget();
+	void CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax);
 
 	// Mesh
 protected:
@@ -72,9 +73,21 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Movement, Meta = (AllowPrivateAccess = "true"))
 	float DroneSpeed;
 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capture, Meta = (AllowPrivateAccess = "true"))
+	int MaxCaptureCount = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capture, Meta = (AllowPrivateAccess = "true"))
+	float CaptureSpeedPerMinute;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capture, Meta = (AllowPrivateAccess = "true"))
+	float BoxSizeMultiplier = 1.0f;
+
 	// 0 ~ 2pi
 	float CurrentRotationRate;
 	float AngleSpeed;
+	int32 CurrentCaptureCount;
+	float TimeRecord;
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera, Meta = (AllowPrivateAccess = "true"))
