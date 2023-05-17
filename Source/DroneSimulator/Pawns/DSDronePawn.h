@@ -83,6 +83,9 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capture, Meta = (AllowPrivateAccess = "true"))
 	float BoxSizeMultiplier = 1.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capture, Meta = (AllowPrivateAccess = "true"))
+	bool IsCapture = false;
+
 	// 0 ~ 2pi
 	float CurrentRotationRate;
 	float AngleSpeed;
@@ -100,6 +103,9 @@ private:
 private:
 	UFUNCTION()
 	class UDSSaveGame* LoadGame();
+
+	UFUNCTION()
+	void ApplyLoadData();
 
 	
 	// movment functions

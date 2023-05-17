@@ -83,51 +83,34 @@ void ADSDronePawn::BeginPlay()
 {
 	Super::BeginPlay();
 
-	APlayerController* PlayerController = CastChecked<APlayerController>(GetController());
-	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-	{
-		Subsystem->AddMappingContext(DefaultMappingContext, 0);
-	}
-
-	UDSSaveGame* DroneData = LoadGame();
-
-	CenterPosition = GetActorLocation();
-
-	if (DroneData != nullptr)
-	{
-		if (DroneData->CurrentTarget != nullptr)
-		{
-			CenterPosition = DroneData->CurrentTarget->GetActorLocation() + FVector(0, 0, DroneData->CurrentHeight);
-		}
-
-		RotationRadius = DroneData->CurrentRadius;
-		DroneSpeed = DroneData->CurrentMoveSpeed;
-		SceneCapture->FOVAngle = DroneData->CurrentFOV;
-
-		CaptureSpeedPerMinute = DroneData->CurrentCaptureSpeed;
-	}
-
-	UpdateDroneSpeed();
+	// APlayerController* PlayerController = CastChecked<APlayerController>(GetController());
+	// if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+	// {
+	// 	Subsystem->AddMappingContext(DefaultMappingContext, 0);
+	// }
+	
+	ApplyLoadData();
+	
 	CurrentCaptureCount = 0;
 
 	CurrentRotationRate = 0.0f;
 
-	static FName Tag(TEXT("DroneTarget"));
-	if (TargetActor == nullptr)
-	{
-		for (TActorIterator<AActor> ActorItr(GetWorld()); ActorItr; ++ActorItr)
-		{
-			if (ActorItr->ActorHasTag(Tag))
-			{
-				TargetActorList.Add(*ActorItr);
-			}
-		}
-		if (TargetActorList.Num() != 0)
-		{
-			CurrentTargetIndex = 0;
-			TargetActor = TargetActorList[CurrentTargetIndex];
-		}
-	}
+	// static FName Tag(TEXT("DroneTarget"));
+	// if (TargetActor == nullptr)
+	// {
+	// 	for (TActorIterator<AActor> ActorItr(GetWorld()); ActorItr; ++ActorItr)
+	// 	{
+	// 		if (ActorItr->ActorHasTag(Tag))
+	// 		{
+	// 			TargetActorList.Add(*ActorItr);
+	// 		}
+	// 	}
+	// 	if (TargetActorList.Num() != 0)
+	// 	{
+	// 		CurrentTargetIndex = 0;
+	// 		TargetActor = TargetActorList[CurrentTargetIndex];
+	// 	}
+	// }
 }
 
 // Called every frame
@@ -135,20 +118,25 @@ void ADSDronePawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	ApplyLoadData();
+	
 	MoveDrone(DeltaTime);
 	LookCamera(TargetActor);
 
-	if (CurrentCaptureCount < MaxCaptureCount)
+	if (IsCapture)
 	{
-		TimeRecord += DeltaTime;
-
-		if (TimeRecord <= 60.0f / CaptureSpeedPerMinute)
+		if (CurrentCaptureCount < MaxCaptureCount)
 		{
-			TakeScreenShot();
-
-			TimeRecord -= 60.0f / CaptureSpeedPerMinute;
-			CurrentCaptureCount++;
-		}
+			TimeRecord += DeltaTime;
+		
+			if (TimeRecord <= 60.0f / CaptureSpeedPerMinute)
+			{
+				TakeScreenShot();
+		
+				TimeRecord -= 60.0f / CaptureSpeedPerMinute;
+				CurrentCaptureCount++;
+			}
+		}	
 	}
 }
 
@@ -315,6 +303,30 @@ UDSSaveGame* ADSDronePawn::LoadGame()
 {
 	const auto SaveSlot = Cast<UDSSaveGame>(UGameplayStatics::LoadGameFromSlot("SaveSetting",0));
 	return SaveSlot;
+}
+
+void ADSDronePawn::ApplyLoadData()
+{
+	UDSSaveGame* DroneData = LoadGame();
+
+	CenterPosition = GetActorLocation();
+
+	if (DroneData != nullptr)
+	{
+		if (DroneData->CurrentTarget != nullptr)
+		{
+			TargetActor = DroneData->CurrentTarget;
+			CenterPosition = DroneData->CurrentTarget->GetActorLocation() + FVector(0, 0, DroneData->CurrentHeight);
+		}
+
+		RotationRadius = DroneData->CurrentRadius;
+		DroneSpeed = DroneData->CurrentMoveSpeed;
+		SceneCapture->FOVAngle = DroneData->CurrentFOV;
+
+		CaptureSpeedPerMinute = DroneData->CurrentCaptureSpeed;
+	}
+
+	UpdateDroneSpeed();
 }
 
 void ADSDronePawn::MoveDrone(float DeltaTime)
