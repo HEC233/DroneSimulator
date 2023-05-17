@@ -33,6 +33,10 @@
 		{
 			"Name": "LandscapePatch",
 			"Enabled": true
+		},
+		{
+			"Name": "AirSim",
+			"Enabled": true
 		}
 	]
 }
