@@ -26,13 +26,16 @@ public:
 	bool AutoPilot = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
-	float CurrentHeight = 1000.0f;
+	float CurrentHeight = 800.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	float CurrentRadius = 1000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
-	float CurrentMoveSpeed = 500.0f;
+	float CurrentMoveSpeed = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+	int CurrentTargetPreset = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	float CurrentFOV = 60.0f;
