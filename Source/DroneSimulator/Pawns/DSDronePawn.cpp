@@ -215,7 +215,7 @@ void ADSDronePawn::TakeScreenShot()
 	FPaths::MakeStandardFilename(ImageFilePath);
 	FPaths::MakeStandardFilename(TextFilePath);
 
-	SceneCapture->CaptureScene();
+	//SceneCapture->CaptureScene();
 
 	FArchive* RawFileWriterAr = IFileManager::Get().CreateFileWriter(*ImageFilePath);
 	if (RawFileWriterAr == nullptr)
@@ -300,13 +300,12 @@ void ADSDronePawn::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax)
 	TArray<AActor*> AttachedActors;
 
 	CaptureTargetActor->GetAttachedActors(AttachedActors, true, true);
+	AttachedActors.Add(CaptureTargetActor);
 
 	for (AActor* Actor : AttachedActors)
 	{
 		StaticMeshComponents += Actor->GetComponentsByClass(UStaticMeshComponent::StaticClass());
 	}
-
-
 
 	//APlayerController* PlayerController = CastChecked<APlayerController>(GetController());
 	//ULocalPlayer* const LocalPlayer = PlayerController->GetLocalPlayer();
