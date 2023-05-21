@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+#include "InputActionValue.h"
 #include "DSDronePawn.generated.h"
 
 UCLASS()
@@ -27,9 +28,15 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	// About Pawn Camera
+public:
+	UFUNCTION(BlueprintCallable, Category = "Capture")
+	void ChangeCaptureState(bool bBoolean);
+
 protected:
+	void ProcessMouseInput(const FInputActionValue& Value);
 	void TakeScreenShot();
 	void ChangeTarget();
+	void StartCapture();
 	void CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax);
 
 	// Mesh
@@ -58,9 +65,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> TakeScreenShotAction;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> ChangeTargetAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputAction> LookAroundAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputAction> StartCaptureAction;
 
 	// Properties
 private:
@@ -75,29 +85,28 @@ private:
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capture, Meta = (AllowPrivateAccess = "true"))
-	int MaxCaptureCount = 0;
+	int MaxCaptureCount = 1000;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capture, Meta = (AllowPrivateAccess = "true"))
-	float CaptureSpeedPerMinute;
+	float CaptureSpeedPerSecond;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capture, Meta = (AllowPrivateAccess = "true"))
 	float BoxSizeMultiplier = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capture, Meta = (AllowPrivateAccess = "true"))
-	bool IsCapture = false;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Capture, Meta = (AllowPrivateAccess = "true"))
+	bool bIsCapture = false;
 
 	// 0 ~ 2pi
 	float CurrentRotationRate;
 	float AngleSpeed;
 	int32 CurrentCaptureCount;
 	float TimeRecord;
+	float CaptureSpan;
+	float CaptureTimeDuration;
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera, Meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<AActor> TargetActor;
-
-	TArray<TObjectPtr<AActor>> TargetActorList;
-	int8 CurrentTargetIndex;
+	TObjectPtr<AActor> CaptureTargetActor;
 
 	// SaveGame
 private:
@@ -111,6 +120,6 @@ private:
 	// movment functions
 private:
 	void MoveDrone(float DeltaTime);
-	void LookCamera(AActor* Target);
+	void LookTarget(AActor* Target);
 	void UpdateDroneSpeed();
 };

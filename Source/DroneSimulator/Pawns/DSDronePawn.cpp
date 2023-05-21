@@ -36,19 +36,31 @@ ADSDronePawn::ADSDronePawn()
 		MeshComponent->SetStaticMesh(StaticMeshRef.Object);
 	}
 
-	static ConstructorHelpers::FObjectFinder<UInputAction> InputScreenShotAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/IA_TakeScreenShot.IA_TakeScreenShot'"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> InputScreenShotAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_TakeScreenShot.IA_TakeScreenShot'"));
 	if (InputScreenShotAction.Object)
 	{
 		TakeScreenShotAction = InputScreenShotAction.Object;
 	}
 
-	static ConstructorHelpers::FObjectFinder<UInputAction> InputChangeTargetAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/IA_ChangeTarget.IA_ChangeTarget'"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> InputChangeTargetAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_ChangeTarget.IA_ChangeTarget'"));
 	if (InputChangeTargetAction.Object)
 	{
 		ChangeTargetAction = InputChangeTargetAction.Object;
 	}
 
-	static ConstructorHelpers::FObjectFinder<UInputMappingContext> InputMappingContextRef(TEXT("/Script/EnhancedInput.InputMappingContext'/Game/DroneSimulator/IMC_Default.IMC_Default'"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> InputLookAroundAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_LookAround.IA_LookAround'"));
+	if (InputLookAroundAction.Object)
+	{
+		LookAroundAction = InputLookAroundAction.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction> InputStartCaptureAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_StartCapture.IA_StartCapture'"));
+	if (InputStartCaptureAction.Object)
+	{
+		StartCaptureAction = InputStartCaptureAction.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputMappingContext> InputMappingContextRef(TEXT("/Script/EnhancedInput.InputMappingContext'/Game/DroneSimulator/Input/IMC_Default.IMC_Default'"));
 	if (InputMappingContextRef.Object)
 	{
 		DefaultMappingContext = InputMappingContextRef.Object;
@@ -64,6 +76,7 @@ ADSDronePawn::ADSDronePawn()
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.f;
 	CameraBoom->SetWorldRotation(FRotator(-90.f, 0.f, 0.f));
+	CameraBoom->bUsePawnControlRotation = false;
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
@@ -83,11 +96,11 @@ void ADSDronePawn::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// APlayerController* PlayerController = CastChecked<APlayerController>(GetController());
-	// if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-	// {
-	// 	Subsystem->AddMappingContext(DefaultMappingContext, 0);
-	// }
+	APlayerController* PlayerController = CastChecked<APlayerController>(GetController());
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+	{
+		Subsystem->AddMappingContext(DefaultMappingContext, 0);
+	}
 	
 	ApplyLoadData();
 	
@@ -119,24 +132,43 @@ void ADSDronePawn::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	ApplyLoadData();
+
+	DeltaTime = FMath::Max(0.0f, DeltaTime - CaptureSpan);
+	CaptureSpan = 0.0f;
+	if (DeltaTime == 0.0f)
+	{
+		return;
+	}
 	
 	MoveDrone(DeltaTime);
-	LookCamera(TargetActor);
+	LookTarget(CaptureTargetActor);
 
-	if (IsCapture)
+	if (bIsCapture)
 	{
 		if (CurrentCaptureCount < MaxCaptureCount)
 		{
 			TimeRecord += DeltaTime;
+			CaptureTimeDuration += DeltaTime;
 		
-			if (TimeRecord <= 60.0f / CaptureSpeedPerMinute)
+			if (TimeRecord >= 1.0f / CaptureSpeedPerSecond)
 			{
+				double StartTime = FPlatformTime::Seconds();
 				TakeScreenShot();
+				double EndTime = FPlatformTime::Seconds();
+
+				CaptureSpan = EndTime - StartTime;
+				UE_LOG(LogTemp, Log, TEXT("Capturing Time : %f"), CaptureSpan);
 		
-				TimeRecord -= 60.0f / CaptureSpeedPerMinute;
+				TimeRecord -= 1.0f / CaptureSpeedPerSecond;
 				CurrentCaptureCount++;
 			}
-		}	
+
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::White, FString::Printf(TEXT("InGame Capture Time : %f, Current Capture %d / %d")
+					, CaptureTimeDuration, CurrentCaptureCount, MaxCaptureCount));
+			}
+		}
 	}
 }
 
@@ -149,21 +181,37 @@ void ADSDronePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	EnhancedInputComponent->BindAction(TakeScreenShotAction, ETriggerEvent::Started, this, &ADSDronePawn::TakeScreenShot);
 	EnhancedInputComponent->BindAction(ChangeTargetAction, ETriggerEvent::Triggered, this, &ADSDronePawn::ChangeTarget);
+	EnhancedInputComponent->BindAction(LookAroundAction, ETriggerEvent::Triggered, this, &ADSDronePawn::ProcessMouseInput);
+	EnhancedInputComponent->BindAction(StartCaptureAction, ETriggerEvent::Triggered, this, &ADSDronePawn::StartCapture);
+}
+
+void ADSDronePawn::ProcessMouseInput(const FInputActionValue& Value)
+{
+	FVector2D LookAxisVector = Value.Get<FVector2D>();
+
+	FTransform BoomTransform = CameraBoom->GetRelativeTransform();
+	FRotator BoomRotator = BoomTransform.Rotator();
+
+	BoomRotator.Yaw = BoomRotator.Yaw + LookAxisVector.X;
+	BoomRotator.Pitch = FMath::Clamp(BoomRotator.Pitch + LookAxisVector.Y, -80.0f, 80.0f);
+	BoomTransform.SetRotation(BoomRotator.Quaternion());
+
+	CameraBoom->SetRelativeTransform(BoomTransform);
 }
 
 void ADSDronePawn::TakeScreenShot()
 {
-	if (RenderTarget == nullptr || TargetActor == nullptr)
+	if (RenderTarget == nullptr || CaptureTargetActor == nullptr)
 	{
 		return;
 	}
 
 	const FDateTime CurrentTime = FDateTime::UtcNow();
 	const FString TimeString = CurrentTime.ToString(TEXT("%Y.%m.%d-%H.%M.%S"));
-	const FString TargetName = TargetActor->GetActorLabel();
+	const FString TargetName = CaptureTargetActor->GetActorLabel();
 	
-	FString ImageFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("%s Image - %s.png"), *TargetName, *TimeString));
-	FString TextFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("%s Image - %s.txt"), *TargetName, *TimeString));
+	FString ImageFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%d - %s Image - %s.png"), CurrentCaptureCount, *TargetName, *TimeString));
+	FString TextFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%d - %s Image - %s.txt"), CurrentCaptureCount, *TargetName, *TimeString));
 	FPaths::MakeStandardFilename(ImageFilePath);
 	FPaths::MakeStandardFilename(TextFilePath);
 
@@ -206,29 +254,36 @@ void ADSDronePawn::TakeScreenShot()
 
 	if (ImageSavedOK)
 	{
-		UE_LOG(LogTemp, Log, TEXT("Save successed"));
+		UE_LOG(LogTemp, Log, TEXT("Capture Save successed"));
 	}
 	else
 	{
-		UE_LOG(LogTemp, Log, TEXT("Save failed"));
+		UE_LOG(LogTemp, Log, TEXT("Capture Save failed"));
 	}
 }
 
 void ADSDronePawn::ChangeTarget()
 {
-	UE_LOG(LogTemp, Log, TEXT("Change Target!!"));
-	if (CurrentTargetIndex != -1)
+	return;
+}
+
+void ADSDronePawn::StartCapture()
+{
+	if (!bIsCapture)
 	{
-		CurrentTargetIndex = (CurrentTargetIndex + 1) % TargetActorList.Num();
-		TargetActor = TargetActorList[CurrentTargetIndex];
+		ChangeCaptureState(true);
+		CurrentCaptureCount = 0;
+		CaptureTimeDuration = 0.0f;
 	}
 }
 
+
+
 void ADSDronePawn::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax)
 {
-	if (TargetActor == nullptr)
+	if (CaptureTargetActor == nullptr)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Target not exist!!!"));
+		UE_LOG(LogTemp, Error, TEXT("Target is not exist!"));
 		return;
 	}
 
@@ -238,12 +293,14 @@ void ADSDronePawn::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax)
 	TArray<UActorComponent*> StaticMeshComponents;
 	TArray<AActor*> AttachedActors;
 
-	TargetActor->GetAttachedActors(AttachedActors, true, true);
+	CaptureTargetActor->GetAttachedActors(AttachedActors, true, true);
 
 	for (AActor* Actor : AttachedActors)
 	{
 		StaticMeshComponents += Actor->GetComponentsByClass(UStaticMeshComponent::StaticClass());
 	}
+
+
 
 	//APlayerController* PlayerController = CastChecked<APlayerController>(GetController());
 	//ULocalPlayer* const LocalPlayer = PlayerController->GetLocalPlayer();
@@ -315,18 +372,18 @@ void ADSDronePawn::ApplyLoadData()
 	{
 		if (DroneData->CurrentTarget != nullptr)
 		{
-			TargetActor = DroneData->CurrentTarget;
-			CenterPosition = DroneData->CurrentTarget->GetActorLocation() + FVector(0, 0, DroneData->CurrentHeight);
+			CaptureTargetActor = DroneData->CurrentTarget;
+			CenterPosition = DroneData->CurrentTarget->GetActorLocation() + FVector(0, 0, DroneData->CurrentHeight * 100.0f);
 		}
 
-		RotationRadius = DroneData->CurrentRadius;
-		DroneSpeed = DroneData->CurrentMoveSpeed;
+		RotationRadius = DroneData->CurrentRadius * 100.0f;
+		AngleSpeed = DroneData->CurrentMoveSpeed / 60.0f;
 		SceneCapture->FOVAngle = DroneData->CurrentFOV;
 
-		CaptureSpeedPerMinute = DroneData->CurrentCaptureSpeed;
+		CaptureSpeedPerSecond = DroneData->CurrentCaptureSpeed;
 	}
 
-	UpdateDroneSpeed();
+	//UpdateDroneSpeed();
 }
 
 void ADSDronePawn::MoveDrone(float DeltaTime)
@@ -341,7 +398,7 @@ void ADSDronePawn::MoveDrone(float DeltaTime)
 	SetActorLocation(NewPosition);
 }
 
-void ADSDronePawn::LookCamera(AActor* Target)
+void ADSDronePawn::LookTarget(AActor* Target)
 {
 	if (Target == nullptr)
 	{
@@ -367,7 +424,7 @@ void ADSDronePawn::LookCamera(AActor* Target)
 	float Yaw = FMath::RadiansToDegrees(YawRad);
 
 	//FRotator LookAtRotator = FLookFromMatrix(this->GetActorLocation(), Direction, FVector::UpVector).Rotator();
-	FollowCamera->SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
+	//FollowCamera->SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
 	//FollowCamera->SetWorldRotation(LookRotator);
 	SceneCapture->SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
 }
@@ -377,5 +434,10 @@ void ADSDronePawn::UpdateDroneSpeed()
 	float Diameter = RotationRadius * 2.0f * PI;
 	float RotatingTime = Diameter / DroneSpeed;
 	AngleSpeed = (2.0f * PI) / RotatingTime;
+}
+
+void ADSDronePawn::ChangeCaptureState(bool bBoolean)
+{
+	bIsCapture = bBoolean;
 }
 
