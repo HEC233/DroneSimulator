@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "DSDronePawn.h"
@@ -208,7 +208,7 @@ void ADSDronePawn::TakeScreenShot()
 
 	const FDateTime CurrentTime = FDateTime::UtcNow();
 	const FString TimeString = CurrentTime.ToString(TEXT("%Y.%m.%d-%H.%M.%S"));
-	const FString TargetName = CaptureTargetActor->GetActorLabel();
+	const FString TargetName = CaptureTargetActor->GetActorNameOrLabel();
 	
 	FString ImageFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%d - %s Image - %s.png"), CurrentCaptureCount, *TargetName, *TimeString));
 	FString TextFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%d - %s Image - %s.txt"), CurrentCaptureCount, *TargetName, *TimeString));
@@ -445,5 +445,10 @@ void ADSDronePawn::UpdateDroneSpeed()
 void ADSDronePawn::ChangeCaptureState(bool bBoolean)
 {
 	bIsCapture = bBoolean;
+}
+
+FString ADSDronePawn::GetCaptureInfo()
+{
+	return FString::Printf(TEXT("캡쳐 진행시간 : %.2f\n현재 캡쳐 수 %d / %d"), CaptureTimeDuration, CurrentCaptureCount, MaxCaptureCount);
 }
 

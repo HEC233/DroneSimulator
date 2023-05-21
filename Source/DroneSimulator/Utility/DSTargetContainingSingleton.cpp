@@ -7,16 +7,16 @@
 UDSTargetContainingSingleton::UDSTargetContainingSingleton()
 {
 	// TODO : regist delegate where map changing event occur
-	UWorld* World = GetWorld();
+	/*UWorld* World = GetWorld();
 	
 	if (World == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("World 객체가 없음!!"))
+		UE_LOG(LogTemp, Warning, TEXT("World 객체가 없음!!"));
 		return;
 	}
 
 	for (AActor* Actor : World->ActiveGroupActors)
 	{
 		
-	}
+	}*/
 }

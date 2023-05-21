@@ -83,3 +83,6 @@ Content/*
 
 # AirSim Plugin
 Plugins/AirSim/* 
+
+# Captured Images
+Captures/*

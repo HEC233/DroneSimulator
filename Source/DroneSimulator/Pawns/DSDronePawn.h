@@ -31,6 +31,8 @@ public:
 public:
 	UFUNCTION(BlueprintCallable, Category = "Capture")
 	void ChangeCaptureState(bool bBoolean);
+	UFUNCTION(BlueprintCallable, Category = "Capture")
+	FString GetCaptureInfo();
 
 protected:
 	void ProcessMouseInput(const FInputActionValue& Value);
