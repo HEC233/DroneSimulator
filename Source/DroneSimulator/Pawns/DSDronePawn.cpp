@@ -274,6 +274,12 @@ void ADSDronePawn::StartCapture()
 		ChangeCaptureState(true);
 		CurrentCaptureCount = 0;
 		CaptureTimeDuration = 0.0f;
+		return;
+	}
+	else
+	{
+		ChangeCaptureState(false);
+		return;
 	}
 }
 
