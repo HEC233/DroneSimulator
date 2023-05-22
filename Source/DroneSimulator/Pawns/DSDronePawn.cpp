@@ -234,7 +234,13 @@ void ADSDronePawn::TakeScreenShot()
 
 	const FDateTime CurrentTime = FDateTime::UtcNow();
 	const FString TimeString = CurrentTime.ToString(TEXT("%Y.%m.%d-%H.%M.%S"));
-	const FString TargetName = CaptureTargetActor->GetActorNameOrLabel();
+	FString TargetName = CaptureTargetActor->GetActorNameOrLabel();
+
+	FProperty* NameProp = CaptureTargetActor->GetClass()->FindPropertyByName(TEXT("TargetName"));
+	if (NameProp)
+	{
+		NameProp->GetValue_InContainer(CaptureTargetActor, &TargetName);
+	}
 	
 	FString ImageFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%d - %s Image - %s.png"), CurrentCaptureCount, *TargetName, *TimeString));
 	FString TextFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%d - %s Image - %s.txt"), CurrentCaptureCount, *TargetName, *TimeString));
@@ -417,6 +423,7 @@ void ADSDronePawn::ApplyLoadData()
 		SceneCapture->FOVAngle = DroneData->CurrentFOV;
 
 		CaptureSpeedPerSecond = DroneData->CurrentCaptureSpeed;
+		bDroneManualMove = !DroneData->AutoPilot;
 	}
 
 	//UpdateDroneSpeed();
@@ -448,7 +455,15 @@ void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
 
 	FVector2D Input = Value.Get<FVector2D>();
 
-	SetActorLocation(GetActorLocation() + FVector(Input.X, Input.Y, 0.0f) * DroneSpeed);
+	const FRotator Rotation = CameraBoom->GetComponentRotation();
+	const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+	const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+	const FVector Movement = ForwardDirection * Input.Y + RightDirection * Input.X;
+
+	SetActorLocation(GetActorLocation() + Movement * DroneSpeed);
 }
 
 void ADSDronePawn::LookTarget(AActor* Target)
@@ -505,14 +520,10 @@ void ADSDronePawn::ChangeDroneMode(bool bBoolean)
 	MeshComponent->SetVisibility(bBoolean);
 	CameraBoom->TargetArmLength = bBoolean ? 400.0f : 2000.0f;
 	CameraBoom->bDoCollisionTest = bBoolean;
-}
 
-void ADSDronePawn::ChangeDroneMovementMode(bool bAutoMove)
-{
-	bDroneManualMove = !bAutoMove;
-
-	FVector NewLocation = GetActorLocation();
-	UDSSaveGame* DroneData = LoadGame();
-	NewLocation.Z = CaptureTargetActor ? CaptureTargetActor->GetActorLocation().Z : 0.0f + DroneData->CurrentHeight;
-	SetActorLocation(NewLocation);
+	if (bDroneMode)
+	{
+		UDSSaveGame* DroneData = LoadGame();
+		SetActorLocation(DroneData->CurrentTarget->GetActorLocation() + FVector(0, 0, DroneData->CurrentHeight * 100.0f));
+	}
 }
