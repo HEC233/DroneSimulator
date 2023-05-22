@@ -21,6 +21,12 @@
 #include "Math/TranslationMatrix.h"
 #include "Engine/LocalPlayer.h"
 
+#include "G:\DroneSimulator\Plugins\AirSim\Source\SimMode\SimModeBase.h"
+#include "G:\DroneSimulator\Plugins\AirSim\Source\Vehicles\Multirotor\SimModeWorldMultiRotor.h"
+#include "G:\DroneSimulator\Plugins\AirSim\Source\AirLib\include\common\AirSimSettings.hpp"
+
+typedef msr::airlib::AirSimSettings AirSimSettings;
+
 // Sets default values
 ADSDronePawn::ADSDronePawn()
 {
@@ -60,6 +66,11 @@ ADSDronePawn::ADSDronePawn()
 		StartCaptureAction = InputStartCaptureAction.Object;
 	}
 
+	static ConstructorHelpers::FObjectFinder<UInputAction> InputDroneMoveAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_DroneMove.IA_DroneMove'"));
+	if (InputDroneMoveAction.Object)
+	{
+		DroneMoveAction = InputDroneMoveAction.Object;
+	}
 	static ConstructorHelpers::FObjectFinder<UInputMappingContext> InputMappingContextRef(TEXT("/Script/EnhancedInput.InputMappingContext'/Game/DroneSimulator/Input/IMC_Default.IMC_Default'"));
 	if (InputMappingContextRef.Object)
 	{
@@ -197,6 +208,7 @@ void ADSDronePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	EnhancedInputComponent->BindAction(ChangeTargetAction, ETriggerEvent::Triggered, this, &ADSDronePawn::ChangeTarget);
 	EnhancedInputComponent->BindAction(LookAroundAction, ETriggerEvent::Triggered, this, &ADSDronePawn::ProcessMouseInput);
 	EnhancedInputComponent->BindAction(StartCaptureAction, ETriggerEvent::Triggered, this, &ADSDronePawn::StartCapture);
+	EnhancedInputComponent->BindAction(DroneMoveAction, ETriggerEvent::Triggered, this, &ADSDronePawn::MoveDroneWithInput);
 }
 
 void ADSDronePawn::ProcessMouseInput(const FInputActionValue& Value)
@@ -412,6 +424,11 @@ void ADSDronePawn::ApplyLoadData()
 
 void ADSDronePawn::MoveDrone(float DeltaTime)
 {
+	if (bDroneManualMove)
+	{
+		return;
+	}
+
 	FVector NewPosition = CenterPosition;
 	CurrentRotationRate = FMath::Fmod((CurrentRotationRate + AngleSpeed * DeltaTime), 2.0f * PI);
 	float SinValue, CosValue;
@@ -420,6 +437,18 @@ void ADSDronePawn::MoveDrone(float DeltaTime)
 	NewPosition += FVector(SinValue, CosValue, 0) * RotationRadius;
 
 	SetActorLocation(NewPosition);
+}
+
+void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
+{
+	if (!bDroneManualMove)
+	{
+		return;
+	}
+
+	FVector2D Input = Value.Get<FVector2D>();
+
+	SetActorLocation(GetActorLocation() + FVector(Input.X, Input.Y, 0.0f) * DroneSpeed);
 }
 
 void ADSDronePawn::LookTarget(AActor* Target)
@@ -478,3 +507,12 @@ void ADSDronePawn::ChangeDroneMode(bool bBoolean)
 	CameraBoom->bDoCollisionTest = bBoolean;
 }
 
+void ADSDronePawn::ChangeDroneMovementMode(bool bAutoMove)
+{
+	bDroneManualMove = !bAutoMove;
+
+	FVector NewLocation = GetActorLocation();
+	UDSSaveGame* DroneData = LoadGame();
+	NewLocation.Z = CaptureTargetActor ? CaptureTargetActor->GetActorLocation().Z : 0.0f + DroneData->CurrentHeight;
+	SetActorLocation(NewLocation);
+}

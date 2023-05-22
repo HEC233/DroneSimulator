@@ -35,6 +35,8 @@ public:
 	FString GetCaptureInfo();
 	UFUNCTION(BlueprintCallable, Category = "Capture")
 	void ChangeDroneMode(bool bBoolean);
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void ChangeDroneMovementMode(bool bAutoMove);
 
 protected:
 	void ProcessMouseInput(const FInputActionValue& Value);
@@ -75,6 +77,8 @@ protected:
 	TObjectPtr<class UInputAction> LookAroundAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> StartCaptureAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputAction> DroneMoveAction;
 
 	// Properties
 private:
@@ -99,6 +103,9 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Capture, Meta = (AllowPrivateAccess = "true"))
 	bool bIsCapture = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Capture, Meta = (AllowPrivateAccess = "true"))
+	bool bDroneManualMove = false;
 
 	bool bDroneMode = false;
 
@@ -126,6 +133,12 @@ private:
 	// movment functions
 private:
 	void MoveDrone(float DeltaTime);
+	void MoveDroneWithInput(const FInputActionValue& Value);
 	void LookTarget(AActor* Target);
 	void UpdateDroneSpeed();
+
+	// AirSim
+private:
+	UPROPERTY()
+	class ASimModeBase* simmode_;
 };
