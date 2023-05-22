@@ -103,10 +103,14 @@ void ADSDronePawn::BeginPlay()
 	}
 	
 	ApplyLoadData();
+	ChangeDroneMode(false);
 	
 	CurrentCaptureCount = 0;
 
 	CurrentRotationRate = 0.0f;
+
+	FInputModeGameAndUI GameAndUI;
+	PlayerController->SetInputMode(GameAndUI);
 
 	// static FName Tag(TEXT("DroneTarget"));
 	// if (TargetActor == nullptr)
@@ -140,8 +144,18 @@ void ADSDronePawn::Tick(float DeltaTime)
 		return;
 	}
 	
-	MoveDrone(DeltaTime);
-	LookTarget(CaptureTargetActor);
+	if (bDroneMode)
+	{
+		MoveDrone(DeltaTime);
+		LookTarget(CaptureTargetActor);
+	}
+	else
+	{
+		if (CaptureTargetActor)
+		{
+			SetActorLocation(CaptureTargetActor->GetActorTransform().GetLocation());
+		}
+	}
 
 	if (bIsCapture)
 	{
@@ -193,7 +207,7 @@ void ADSDronePawn::ProcessMouseInput(const FInputActionValue& Value)
 	FRotator BoomRotator = BoomTransform.Rotator();
 
 	BoomRotator.Yaw = BoomRotator.Yaw + LookAxisVector.X;
-	BoomRotator.Pitch = FMath::Clamp(BoomRotator.Pitch + LookAxisVector.Y, -80.0f, 80.0f);
+	BoomRotator.Pitch = FMath::Clamp(BoomRotator.Pitch + LookAxisVector.Y, -80.0f, bDroneMode ? 80.0f : -10.0f);
 	BoomTransform.SetRotation(BoomRotator.Quaternion());
 
 	CameraBoom->SetRelativeTransform(BoomTransform);
@@ -269,6 +283,11 @@ void ADSDronePawn::ChangeTarget()
 
 void ADSDronePawn::StartCapture()
 {
+	if (!bDroneMode)
+	{
+		return;
+	}
+
 	if (!bIsCapture)
 	{
 		ChangeCaptureState(true);
@@ -449,5 +468,13 @@ void ADSDronePawn::ChangeCaptureState(bool bBoolean)
 FString ADSDronePawn::GetCaptureInfo()
 {
 	return FString::Printf(TEXT("캡쳐 진행시간 : %.2f\n현재 캡쳐 수 %d / %d"), CaptureTimeDuration, CurrentCaptureCount, MaxCaptureCount);
+}
+
+void ADSDronePawn::ChangeDroneMode(bool bBoolean)
+{
+	bDroneMode = bBoolean;
+	MeshComponent->SetVisibility(bBoolean);
+	CameraBoom->TargetArmLength = bBoolean ? 400.0f : 2000.0f;
+	CameraBoom->bDoCollisionTest = bBoolean;
 }
 

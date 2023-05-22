@@ -33,6 +33,8 @@ public:
 	void ChangeCaptureState(bool bBoolean);
 	UFUNCTION(BlueprintCallable, Category = "Capture")
 	FString GetCaptureInfo();
+	UFUNCTION(BlueprintCallable, Category = "Capture")
+	void ChangeDroneMode(bool bBoolean);
 
 protected:
 	void ProcessMouseInput(const FInputActionValue& Value);
@@ -97,6 +99,8 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Capture, Meta = (AllowPrivateAccess = "true"))
 	bool bIsCapture = false;
+
+	bool bDroneMode = false;
 
 	// 0 ~ 2pi
 	float CurrentRotationRate;
