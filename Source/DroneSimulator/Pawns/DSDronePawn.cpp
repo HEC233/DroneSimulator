@@ -21,9 +21,13 @@
 #include "Math/TranslationMatrix.h"
 #include "Engine/LocalPlayer.h"
 
-#include "G:\DroneSimulator\Plugins\AirSim\Source\SimMode\SimModeBase.h"
-#include "G:\DroneSimulator\Plugins\AirSim\Source\Vehicles\Multirotor\SimModeWorldMultiRotor.h"
-#include "G:\DroneSimulator\Plugins\AirSim\Source\AirLib\include\common\AirSimSettings.hpp"
+// #include "G:\DroneSimulator\Plugins\AirSim\Source\SimMode\SimModeBase.h"
+// #include "G:\DroneSimulator\Plugins\AirSim\Source\Vehicles\Multirotor\SimModeWorldMultiRotor.h"
+// #include "G:\DroneSimulator\Plugins\AirSim\Source\AirLib\include\common\AirSimSettings.hpp"
+
+#include "SimMode/SimModeBase.h"
+#include "vehicles/multirotor/SimModeWorldMultiRotor.h"
+#include "AirLib/include/common/AirSimSettings.hpp"
 
 typedef msr::airlib::AirSimSettings AirSimSettings;
 
