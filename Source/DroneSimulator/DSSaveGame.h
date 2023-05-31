@@ -35,7 +35,7 @@ public:
 	float CurrentMoveSpeed = 100.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
-	FString CurrentTargetPreset = "프리셋1";
+	FString CurrentTargetPreset = TEXT("프리셋1");
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	float CurrentFOV = 60.0f;
