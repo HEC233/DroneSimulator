@@ -237,7 +237,7 @@ void ADSDronePawn::TakeScreenShot()
 		NameProp->GetValue_InContainer(CaptureTargetActor, &TargetName);
 	}
 	
-	FString ImageFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%d - %s Image - %s.png"), CurrentCaptureCount, *TargetName, *TimeString));
+	FString ImageFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%d - %s Image - %s.jpg"), CurrentCaptureCount, *TargetName, *TimeString));
 	FString TextFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%d - %s Image - %s.txt"), CurrentCaptureCount, *TargetName, *TimeString));
 	FPaths::MakeStandardFilename(ImageFilePath);
 	FPaths::MakeStandardFilename(TextFilePath);
@@ -250,7 +250,7 @@ void ADSDronePawn::TakeScreenShot()
 		UE_LOG(LogTemp, Log, TEXT("Problem Occured"));
 		return;
 	}
-	bool ImageSavedOK = FImageUtils::ExportRenderTarget2DAsPNG(RenderTarget, *RawFileWriterAr);
+	bool ImageSavedOK = ExportRenderTargetJPG(RenderTarget, *RawFileWriterAr);
 	RawFileWriterAr->Close();
 
 	FVector2f Min, Max;
@@ -398,6 +398,25 @@ void ADSDronePawn::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax)
 
 	//OutMin.Y /= LocalPlayer->ViewportClient->Viewport->GetDesiredAspectRatio();
 	//OutMax.Y /= LocalPlayer->ViewportClient->Viewport->GetDesiredAspectRatio();
+}
+
+bool ADSDronePawn::ExportRenderTargetJPG(UTextureRenderTarget2D* TexRT, FArchive& Ar)
+{
+	FImage Image;
+	if (!FImageUtils::GetRenderTargetImage(TexRT, Image))
+	{
+		return false;
+	}
+
+	TArray64<uint8> CompressedData;
+	if (!FImageUtils::CompressImage(CompressedData, TEXT("jpg"), Image, 100))
+	{
+		return false;
+	}
+
+	Ar.Serialize((void*)CompressedData.GetData(), CompressedData.GetAllocatedSize());
+
+	return true;
 }
 
 UDSSaveGame* ADSDronePawn::LoadGame()

@@ -42,6 +42,7 @@ protected:
 	void ChangeTarget();
 	void StartCapture();
 	void CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax);
+	bool ExportRenderTargetJPG(class UTextureRenderTarget2D* TexRT, FArchive& Ar);
 
 	// Mesh
 protected:
