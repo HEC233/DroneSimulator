@@ -106,6 +106,7 @@ private:
 	bool bDroneManualMove = false;
 
 	bool bDroneMode = false;
+	FName TargetFilteringName;
 
 	// 0 ~ 2pi
 	float CurrentRotationRate;

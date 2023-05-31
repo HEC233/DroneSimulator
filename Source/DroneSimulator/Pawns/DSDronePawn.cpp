@@ -116,6 +116,7 @@ void ADSDronePawn::BeginPlay()
 
 	FInputModeGameAndUI GameAndUI;
 	PlayerController->SetInputMode(GameAndUI);
+	TargetFilteringName = FName(TEXT("NoTarget"));
 
 	// static FName Tag(TEXT("DroneTarget"));
 	// if (TargetActor == nullptr)
@@ -226,7 +227,7 @@ void ADSDronePawn::TakeScreenShot()
 		return;
 	}
 
-	const FDateTime CurrentTime = FDateTime::UtcNow();
+	const FDateTime CurrentTime = FDateTime::Now();
 	const FString TimeString = CurrentTime.ToString(TEXT("%Y.%m.%d-%H.%M.%S"));
 	FString TargetName = CaptureTargetActor->GetActorNameOrLabel();
 
@@ -335,7 +336,14 @@ void ADSDronePawn::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax)
 
 	for (AActor* Actor : AttachedActors)
 	{
-		StaticMeshComponents += Actor->GetComponentsByClass(UStaticMeshComponent::StaticClass());
+		TArray<UActorComponent*> Components = Actor->GetComponentsByClass(UStaticMeshComponent::StaticClass());
+		for (UActorComponent* Component : Components)
+		{
+			if (!Component->ComponentHasTag(TargetFilteringName))
+			{
+				StaticMeshComponents.Emplace(Component);
+			}
+		}
 	}
 
 	//APlayerController* PlayerController = CastChecked<APlayerController>(GetController());
