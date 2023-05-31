@@ -114,8 +114,9 @@ void ADSDronePawn::BeginPlay()
 
 	CurrentRotationRate = 0.0f;
 
-	FInputModeGameAndUI GameAndUI;
-	PlayerController->SetInputMode(GameAndUI);
+	/*FInputModeGameAndUI GameAndUI;
+	GameAndUI.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+	PlayerController->SetInputMode(GameAndUI);*/
 	TargetFilteringName = FName(TEXT("NoTarget"));
 
 	// static FName Tag(TEXT("DroneTarget"));
