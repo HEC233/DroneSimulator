@@ -7,24 +7,17 @@
 #include "InputMappingContext.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "Engine/TextureRenderTarget2D.h"
-#include "Engine/Texture2D.h"
-#include "Components/SceneCaptureComponent2D.h"
-#include "ImageUtils.h"
 #include "EngineUtils.h"
 #include "DroneSimulator/DSSaveGame.h"
-#include "HAL/FileManager.h"
-#include "HAL/FileManagerGeneric.h"
 #include "Kismet/GameplayStatics.h"
-#include "Math/UnrealMathUtility.h"
-#include "Math/NumericLimits.h"
-#include "Math/TranslationMatrix.h"
 #include "Engine/LocalPlayer.h"
+
+#include "DroneSimulator/Components/DSCaptureComponent.h"
 
 // Sets default values
 ADSDronePawn::ADSDronePawn()
 {
- 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
@@ -34,18 +27,6 @@ ADSDronePawn::ADSDronePawn()
 	if (StaticMeshRef.Object)
 	{
 		MeshComponent->SetStaticMesh(StaticMeshRef.Object);
-	}
-
-	static ConstructorHelpers::FObjectFinder<UInputAction> InputScreenShotAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_TakeScreenShot.IA_TakeScreenShot'"));
-	if (InputScreenShotAction.Object)
-	{
-		TakeScreenShotAction = InputScreenShotAction.Object;
-	}
-
-	static ConstructorHelpers::FObjectFinder<UInputAction> InputChangeTargetAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_ChangeTarget.IA_ChangeTarget'"));
-	if (InputChangeTargetAction.Object)
-	{
-		ChangeTargetAction = InputChangeTargetAction.Object;
 	}
 
 	static ConstructorHelpers::FObjectFinder<UInputAction> InputLookAroundAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_LookAround.IA_LookAround'"));
@@ -71,12 +52,6 @@ ADSDronePawn::ADSDronePawn()
 		DefaultMappingContext = InputMappingContextRef.Object;
 	}
 
-	static ConstructorHelpers::FObjectFinder<UTextureRenderTarget2D> RenderTargetRef(TEXT("/Script/Engine.TextureRenderTarget2D'/Game/DroneSimulator/NewTextureRenderTarget2D.NewTextureRenderTarget2D'"));
-	if (RenderTargetRef.Object)
-	{
-		RenderTarget = RenderTargetRef.Object;
-	}
-
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.f;
@@ -87,13 +62,12 @@ ADSDronePawn::ADSDronePawn()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
-	SceneCapture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCapture2D"));
-	SceneCapture->SetupAttachment(RootComponent);
-	SceneCapture->SetWorldLocation(FVector(0.f, 0.f, -15.f));
-	SceneCapture->TextureTarget = RenderTarget;
+	CaptureComponent = CreateDefaultSubobject<UDSCaptureComponent>(TEXT("CaptureComponent"));
+	CaptureComponent->AttachCamera(RootComponent);
+	CaptureComponent->SetCameraPosition(FVector(0.f, 0.f, -15.f));
 
-	RotationRadius = 10000.f;
-	DroneSpeed = 1000.f;
+	RotationRadius = 10.f;
+	DroneSpeed = 15.f;
 }
 
 // Called when the game starts or when spawned
@@ -106,10 +80,10 @@ void ADSDronePawn::BeginPlay()
 	{
 		Subsystem->AddMappingContext(DefaultMappingContext, 0);
 	}
-	
+
 	ApplyLoadData();
 	ChangeDroneMode(false);
-	
+
 	CurrentCaptureCount = 0;
 
 	CurrentRotationRate = 0.0f;
@@ -117,24 +91,6 @@ void ADSDronePawn::BeginPlay()
 	/*FInputModeGameAndUI GameAndUI;
 	GameAndUI.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
 	PlayerController->SetInputMode(GameAndUI);*/
-	TargetFilteringName = FName(TEXT("NoTarget"));
-
-	// static FName Tag(TEXT("DroneTarget"));
-	// if (TargetActor == nullptr)
-	// {
-	// 	for (TActorIterator<AActor> ActorItr(GetWorld()); ActorItr; ++ActorItr)
-	// 	{
-	// 		if (ActorItr->ActorHasTag(Tag))
-	// 		{
-	// 			TargetActorList.Add(*ActorItr);
-	// 		}
-	// 	}
-	// 	if (TargetActorList.Num() != 0)
-	// 	{
-	// 		CurrentTargetIndex = 0;
-	// 		TargetActor = TargetActorList[CurrentTargetIndex];
-	// 	}
-	// }
 }
 
 // Called every frame
@@ -150,17 +106,16 @@ void ADSDronePawn::Tick(float DeltaTime)
 	{
 		return;
 	}
-	
+
 	if (bDroneMode)
 	{
 		MoveDrone(DeltaTime);
-		LookTarget(CaptureTargetActor);
 	}
 	else
 	{
-		if (CaptureTargetActor)
+		if (CaptureComponent->GetTarget())
 		{
-			SetActorLocation(CaptureTargetActor->GetActorTransform().GetLocation());
+			SetActorLocation(CaptureComponent->GetTarget()->GetActorTransform().GetLocation());
 		}
 	}
 
@@ -170,16 +125,16 @@ void ADSDronePawn::Tick(float DeltaTime)
 		{
 			TimeRecord += DeltaTime;
 			CaptureTimeDuration += DeltaTime;
-		
+
 			if (TimeRecord >= 1.0f / CaptureSpeedPerSecond)
 			{
 				double StartTime = FPlatformTime::Seconds();
-				TakeScreenShot();
+				CaptureComponent->TakeScreenShot(CurrentCaptureCount);
 				double EndTime = FPlatformTime::Seconds();
 
 				CaptureSpan = EndTime - StartTime;
 				UE_LOG(LogTemp, Log, TEXT("Capturing Time : %f"), CaptureSpan);
-		
+
 				TimeRecord -= 1.0f / CaptureSpeedPerSecond;
 				CurrentCaptureCount++;
 			}
@@ -200,8 +155,6 @@ void ADSDronePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent);
 
-	EnhancedInputComponent->BindAction(TakeScreenShotAction, ETriggerEvent::Started, this, &ADSDronePawn::TakeScreenShot);
-	EnhancedInputComponent->BindAction(ChangeTargetAction, ETriggerEvent::Triggered, this, &ADSDronePawn::ChangeTarget);
 	EnhancedInputComponent->BindAction(LookAroundAction, ETriggerEvent::Triggered, this, &ADSDronePawn::ProcessMouseInput);
 	EnhancedInputComponent->BindAction(StartCaptureAction, ETriggerEvent::Triggered, this, &ADSDronePawn::StartCapture);
 	EnhancedInputComponent->BindAction(DroneMoveAction, ETriggerEvent::Triggered, this, &ADSDronePawn::MoveDroneWithInput);
@@ -219,80 +172,6 @@ void ADSDronePawn::ProcessMouseInput(const FInputActionValue& Value)
 	BoomTransform.SetRotation(BoomRotator.Quaternion());
 
 	CameraBoom->SetRelativeTransform(BoomTransform);
-}
-
-void ADSDronePawn::TakeScreenShot()
-{
-	if (RenderTarget == nullptr || CaptureTargetActor == nullptr)
-	{
-		return;
-	}
-
-	const FDateTime CurrentTime = FDateTime::Now();
-	const FString TimeString = CurrentTime.ToString(TEXT("%Y.%m.%d-%H.%M.%S"));
-	FString TargetName = CaptureTargetActor->GetActorNameOrLabel();
-
-	FProperty* NameProp = CaptureTargetActor->GetClass()->FindPropertyByName(TEXT("TargetName"));
-	if (NameProp)
-	{
-		NameProp->GetValue_InContainer(CaptureTargetActor, &TargetName);
-	}
-	
-	FString ImageFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%d - %s Image - %s.jpg"), CurrentCaptureCount, *TargetName, *TimeString));
-	FString TextFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%d - %s Image - %s.txt"), CurrentCaptureCount, *TargetName, *TimeString));
-	FPaths::MakeStandardFilename(ImageFilePath);
-	FPaths::MakeStandardFilename(TextFilePath);
-
-	//SceneCapture->CaptureScene();
-
-	FArchive* RawFileWriterAr = IFileManager::Get().CreateFileWriter(*ImageFilePath);
-	if (RawFileWriterAr == nullptr)
-	{
-		UE_LOG(LogTemp, Log, TEXT("Problem Occured"));
-		return;
-	}
-	bool ImageSavedOK = ExportRenderTargetJPG(RenderTarget, *RawFileWriterAr);
-	RawFileWriterAr->Close();
-
-	FVector2f Min, Max;
-	CalculateNDCMinMax(Min, Max);
-
-	Min = (Min / 2) + FVector2f(0.5f, 0.5f);
-	Max = (Max / 2) + FVector2f(0.5f, 0.5f);
-
-	Min.X *= RenderTarget->SizeX;
-	Max.X *= RenderTarget->SizeX;
-	Min.Y *= RenderTarget->SizeY;
-	Max.Y *= RenderTarget->SizeY;
-	Min.Y = RenderTarget->SizeY - Min.Y;
-	Max.Y = RenderTarget->SizeY - Max.Y;
-
-	float SwapTemp = Min.Y;
-	Min.Y = Max.Y;
-	Max.Y = SwapTemp;
-
-	/*FVector2f Center = (Min + Max) / 2.0f;
-	Min = Center + (Min - Center) * BoxSizeMultiplier;
-	Max = Center + (Max - Center) * BoxSizeMultiplier;*/
-
-	UE_LOG(LogTemp, Log, TEXT("Min: %s, Max: %s"), *Min.ToString(), *Max.ToString());
-	FString LabelingText = FString::Printf(TEXT("%s,%d,%d,%d,%d"), *TargetName, 
-		FMath::FloorToInt(Min.X), FMath::FloorToInt(Min.Y), FMath::CeilToInt(Max.X - Min.X), FMath::CeilToInt(Max.Y - Min.Y));
-	FFileHelper::SaveStringToFile(*LabelingText, *TextFilePath);
-
-	if (ImageSavedOK)
-	{
-		UE_LOG(LogTemp, Log, TEXT("Capture Save successed"));
-	}
-	else
-	{
-		UE_LOG(LogTemp, Log, TEXT("Capture Save failed"));
-	}
-}
-
-void ADSDronePawn::ChangeTarget()
-{
-	return;
 }
 
 void ADSDronePawn::StartCapture()
@@ -316,113 +195,9 @@ void ADSDronePawn::StartCapture()
 	}
 }
 
-
-
-void ADSDronePawn::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax)
-{
-	if (CaptureTargetActor == nullptr)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Target is not exist!"));
-		return;
-	}
-
-	OutMin = FVector2f(TNumericLimits<float>::Max(), TNumericLimits<float>::Max());
-	OutMax = FVector2f(TNumericLimits<float>::Min(), TNumericLimits<float>::Min());
-
-	TArray<UActorComponent*> StaticMeshComponents;
-	TArray<AActor*> AttachedActors;
-
-	CaptureTargetActor->GetAttachedActors(AttachedActors, true, true);
-	AttachedActors.Add(CaptureTargetActor);
-
-	for (AActor* Actor : AttachedActors)
-	{
-		TArray<UActorComponent*> Components = Actor->GetComponentsByClass(UStaticMeshComponent::StaticClass());
-		for (UActorComponent* Component : Components)
-		{
-			if (!Component->ComponentHasTag(TargetFilteringName))
-			{
-				StaticMeshComponents.Emplace(Component);
-			}
-		}
-	}
-
-	//APlayerController* PlayerController = CastChecked<APlayerController>(GetController());
-	//ULocalPlayer* const LocalPlayer = PlayerController->GetLocalPlayer();
-
-	//FSceneViewProjectionData ProjectionData;
-	//if (LocalPlayer->GetProjectionData(LocalPlayer->ViewportClient->Viewport, /*out*/ ProjectionData))
-	//{
-	//	ViewProjectionMatrix = ProjectionData.ComputeViewProjectionMatrix();
-	//}
-
-	FMatrix ViewProjectionMatrix = FMatrix::Identity;
-	const FTransform SceneCaptureTransform = SceneCapture->GetComponentTransform();
-	FMinimalViewInfo ViewInfo;
-	SceneCapture->GetCameraView(0.0f, ViewInfo);
-	const FMatrix ViewMatrix = FTranslationMatrix(-SceneCaptureTransform.GetLocation()) * FInverseRotationMatrix(SceneCaptureTransform.Rotator()) * FMatrix(
-		FPlane(0, 0, 1, 0),
-		FPlane(1, 0, 0, 0),
-		FPlane(0, 1, 0, 0),
-		FPlane(0, 0, 0, 1));
-	const FMatrix ProjectionMatrix = ViewInfo.CalculateProjectionMatrix();
-	ViewProjectionMatrix = ViewMatrix * ProjectionMatrix;
-
-	for (UActorComponent* ActorComponent : StaticMeshComponents)
-	{
-		UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(ActorComponent);
-
-		FBox BoundingBox = StaticMeshComp->GetStaticMesh()->GetBoundingBox();
-
-		TArray<FVector> Points;
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Min.X, BoundingBox.Min.Y, BoundingBox.Min.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Min.X, BoundingBox.Min.Y, BoundingBox.Max.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Min.X, BoundingBox.Max.Y, BoundingBox.Min.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Min.X, BoundingBox.Max.Y, BoundingBox.Max.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Max.X, BoundingBox.Min.Y, BoundingBox.Min.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Max.X, BoundingBox.Min.Y, BoundingBox.Max.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Max.X, BoundingBox.Max.Y, BoundingBox.Min.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Max.X, BoundingBox.Max.Y, BoundingBox.Max.Z)));
-
-		for (FVector& Point : Points)
-		{
-			FVector4 ClipCoordinate = ViewProjectionMatrix.TransformPosition(Point);
-			FVector NDCCoordinate = FVector(ClipCoordinate.X, ClipCoordinate.Y, ClipCoordinate.Z) / ClipCoordinate.W;
-
-			OutMin.X = FMath::Min(NDCCoordinate.X, OutMin.X);
-			OutMin.Y = FMath::Min(NDCCoordinate.Y, OutMin.Y);
-
-			OutMax.X = FMath::Max(NDCCoordinate.X, OutMax.X);
-			OutMax.Y = FMath::Max(NDCCoordinate.Y, OutMax.Y);
-		}
-	}
-
-	//OutMin.Y /= LocalPlayer->ViewportClient->Viewport->GetDesiredAspectRatio();
-	//OutMax.Y /= LocalPlayer->ViewportClient->Viewport->GetDesiredAspectRatio();
-}
-
-bool ADSDronePawn::ExportRenderTargetJPG(UTextureRenderTarget2D* TexRT, FArchive& Ar)
-{
-	FImage Image;
-	if (!FImageUtils::GetRenderTargetImage(TexRT, Image))
-	{
-		return false;
-	}
-
-	TArray64<uint8> CompressedData;
-	if (!FImageUtils::CompressImage(CompressedData, TEXT("jpg"), Image, 100))
-	{
-		return false;
-	}
-
-	Ar.Serialize((void*)CompressedData.GetData(), CompressedData.GetAllocatedSize());
-
-	return true;
-}
-
 UDSSaveGame* ADSDronePawn::LoadGame()
 {
-	const auto SaveSlot = Cast<UDSSaveGame>(UGameplayStatics::LoadGameFromSlot("SaveSetting",0));
+	const auto SaveSlot = Cast<UDSSaveGame>(UGameplayStatics::LoadGameFromSlot("SaveSetting", 0));
 	return SaveSlot;
 }
 
@@ -430,22 +205,22 @@ void ADSDronePawn::ApplyLoadData()
 {
 	UDSSaveGame* DroneData = LoadGame();
 
-	CenterPosition = GetActorLocation();
-
 	if (DroneData != nullptr)
 	{
-		if (DroneData->CurrentTarget != nullptr)
+		if (DroneData->CurrentTarget != nullptr && DroneData->CurrentTarget != CaptureComponent->GetTarget())
 		{
-			CaptureTargetActor = DroneData->CurrentTarget;
 			CenterPosition = DroneData->CurrentTarget->GetActorLocation() + FVector(0, 0, DroneData->CurrentHeight * 100.0f);
+
+			CaptureComponent->SetTarget(DroneData->CurrentTarget);
 		}
 
 		RotationRadius = DroneData->CurrentRadius * 100.0f;
 		AngleSpeed = DroneData->CurrentMoveSpeed / 60.0f;
-		SceneCapture->FOVAngle = DroneData->CurrentFOV;
 
 		CaptureSpeedPerSecond = DroneData->CurrentCaptureSpeed;
 		bDroneManualMove = !DroneData->AutoPilot;
+
+		CaptureComponent->SetCameraFOV(DroneData->CurrentFOV);
 	}
 
 	//UpdateDroneSpeed();
@@ -486,37 +261,6 @@ void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
 	const FVector Movement = ForwardDirection * Input.Y + RightDirection * Input.X;
 
 	SetActorLocation(GetActorLocation() + Movement * DroneSpeed);
-}
-
-void ADSDronePawn::LookTarget(AActor* Target)
-{
-	if (Target == nullptr)
-	{
-		return;
-	}
-
-	FVector Direction = Target->GetActorLocation() - this->GetActorLocation();
-	Direction.Normalize();
-
-	// This code does same thing below... but I didn't know that and did it myself...
-	//FRotator LookRotator = Direction.Rotation();
-
-	FVector XYDirection = FVector(Direction.X, Direction.Y, 0.f);
-	
-	// value of pitch angle cosine
-	float XYLength = XYDirection.Length();
-	XYDirection.Normalize();
-
-	float PitchRad = FMath::Atan2(Direction.Z, XYLength);
-	float YawRad = FMath::Atan2(XYDirection.Y, XYDirection.X);
-
-	float Pitch = FMath::RadiansToDegrees(PitchRad);
-	float Yaw = FMath::RadiansToDegrees(YawRad);
-
-	//FRotator LookAtRotator = FLookFromMatrix(this->GetActorLocation(), Direction, FVector::UpVector).Rotator();
-	//FollowCamera->SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
-	//FollowCamera->SetWorldRotation(LookRotator);
-	SceneCapture->SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
 }
 
 void ADSDronePawn::UpdateDroneSpeed()
