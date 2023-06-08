@@ -151,7 +151,24 @@ void UDSCaptureComponent::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMa
 
 	for (AActor* Actor : AttachedActors)
 	{
-		TArray<UStaticMeshComponent*> Components;
+		TArray<USceneComponent*> SceneComps;
+		Actor->GetComponents<USceneComponent>(SceneComps);
+		for (USceneComponent* Component : SceneComps)
+		{
+			if (Component->IsVisible())
+			{
+				TArray<UStaticMeshComponent*> Components;
+				Actor->GetComponents<UStaticMeshComponent>(Components);
+				for (UStaticMeshComponent* MeshComponent : Components)
+				{
+					if (!MeshComponent->ComponentHasTag(TargetFilteringName))
+					{
+						StaticMeshComponents.Emplace(MeshComponent);
+					}
+				}
+			}
+		}
+		/*TArray<UStaticMeshComponent*> Components;
 		Actor->GetComponents<UStaticMeshComponent>(Components);
 		for (UStaticMeshComponent* Component : Components)
 		{
@@ -159,7 +176,7 @@ void UDSCaptureComponent::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMa
 			{
 				StaticMeshComponents.Emplace(Component);
 			}
-		}
+		}*/
 	}
 
 	//APlayerController* PlayerController = CastChecked<APlayerController>(GetController());
