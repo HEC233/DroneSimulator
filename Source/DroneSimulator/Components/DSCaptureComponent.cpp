@@ -151,8 +151,9 @@ void UDSCaptureComponent::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMa
 
 	for (AActor* Actor : AttachedActors)
 	{
-		TArray<UActorComponent*> Components = Actor->GetComponentsByClass(UStaticMeshComponent::StaticClass());
-		for (UActorComponent* Component : Components)
+		TArray<UStaticMeshComponent*> Components;
+		Actor->GetComponents<UStaticMeshComponent>(Components);
+		for (UStaticMeshComponent* Component : Components)
 		{
 			if (!Component->ComponentHasTag(TargetFilteringName))
 			{

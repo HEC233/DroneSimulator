@@ -110,7 +110,7 @@ private:
 	UFUNCTION()
 	class UDSSaveGame* LoadGame();
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable, Category="Data")
 	void ApplyLoadData();
 
 
