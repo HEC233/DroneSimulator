@@ -21,6 +21,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	int CurrentWeather = 0;
+	
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+    bool FogMode = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	bool AutoPilot = true;
