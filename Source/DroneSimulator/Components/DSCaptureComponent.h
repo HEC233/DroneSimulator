@@ -42,13 +42,18 @@ public:
 	void AttachCamera(USceneComponent* Parent);
 
 	void SetCameraFOV(float FOV);
+	void SetZoomRate(float InZoomRate);
 
 private:
 	void CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax);
 	bool ExportRenderTargetJPG(class UTextureRenderTarget2D* TexRT, FArchive& Ar);
 	void LookTarget();
 
+	FORCEINLINE void SetFinalFOV();
+
 private:
 	FName TargetFilteringName;
 
+	float CurrentFOV;
+	float ZoomRate = 1.0f;
 };

@@ -129,7 +129,14 @@ void UDSCaptureComponent::AttachCamera(USceneComponent* Parent)
 
 void UDSCaptureComponent::SetCameraFOV(float FOV)
 {
-	SceneCapture->FOVAngle = FOV;
+	CurrentFOV = FOV;
+	SetFinalFOV();
+}
+
+void UDSCaptureComponent::SetZoomRate(float InZoomRate)
+{
+	ZoomRate = InZoomRate;
+	SetFinalFOV();
 }
 
 void UDSCaptureComponent::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax)
@@ -241,11 +248,15 @@ bool UDSCaptureComponent::ExportRenderTargetJPG(UTextureRenderTarget2D* TexRT, F
 		return false;
 	}
 
+	UE_LOG(LogTemp, Log, TEXT("Image Buffer's size : %d"), (Image.RawData.GetAllocatedSize()));
+
 	TArray64<uint8> CompressedData;
 	if (!FImageUtils::CompressImage(CompressedData, TEXT("jpg"), Image, 100))
 	{
 		return false;
 	}
+
+	UE_LOG(LogTemp, Log, TEXT("Compressed Image Buffer's size : %d"), CompressedData.GetAllocatedSize());
 
 	Ar.Serialize((void*)CompressedData.GetData(), CompressedData.GetAllocatedSize());
 
@@ -281,5 +292,10 @@ void UDSCaptureComponent::LookTarget()
 	//FollowCamera->SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
 	//FollowCamera->SetWorldRotation(LookRotator);
 	SceneCapture->SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
+}
+
+void UDSCaptureComponent::SetFinalFOV()
+{
+	SceneCapture->FOVAngle = FMath::RadiansToDegrees(FMath::Atan(FMath::Tan(FMath::DegreesToRadians(CurrentFOV) / ZoomRate)));
 }
 
