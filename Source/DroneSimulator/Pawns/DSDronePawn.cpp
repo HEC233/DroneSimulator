@@ -218,7 +218,7 @@ void ADSDronePawn::ApplyLoadData()
 		AngleSpeed = DroneData->CurrentMoveSpeed / 60.0f;
 
 		CaptureSpeedPerSecond = DroneData->CurrentCaptureSpeed;
-		bDroneManualMove = !DroneData->AutoPilot;
+		//bDroneManualMove = !DroneData->AutoPilot;
 
 		CaptureComponent->SetCameraFOV(DroneData->CurrentFOV);
 	}
@@ -228,7 +228,8 @@ void ADSDronePawn::ApplyLoadData()
 
 void ADSDronePawn::MoveDrone(float DeltaTime)
 {
-	if (bDroneManualMove)
+	UDSSaveGame* DroneData = LoadGame();
+	if (DroneData->PilotMode != EPilotMode::E_AutoMode)
 	{
 		return;
 	}
@@ -245,7 +246,8 @@ void ADSDronePawn::MoveDrone(float DeltaTime)
 
 void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
 {
-	if (!bDroneManualMove)
+	UDSSaveGame* DroneData = LoadGame();
+	if (DroneData->PilotMode != EPilotMode::E_ManualMode)
 	{
 		return;
 	}

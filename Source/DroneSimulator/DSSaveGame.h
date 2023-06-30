@@ -9,12 +9,34 @@
 /**
  * 
  */
+
+UENUM(BlueprintType)
+enum class EPilotMode : uint8
+{
+	E_AutoMode,
+	E_ManualMode,
+	E_WayPointMode,
+};
+
+USTRUCT(BlueprintType)
+struct FWaypoint
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString Name;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FVector> Points;
+};
+
 UCLASS()
 class DRONESIMULATOR_API UDSSaveGame : public USaveGame
 {
 	GENERATED_BODY()
 
 public:
+	UDSSaveGame();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	int CurrentTime = 0;
@@ -26,7 +48,7 @@ public:
     bool FogMode = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
-	bool AutoPilot = true;
+	EPilotMode PilotMode = EPilotMode::E_AutoMode;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	float CurrentHeight = 20.0f;
@@ -48,4 +70,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	TObjectPtr<AActor> CurrentTarget = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+	TArray<FWaypoint> WayPointArr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+	FWaypoint CurrentWayPoint;
 };

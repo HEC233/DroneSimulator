@@ -92,8 +92,8 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Capture, Meta = (AllowPrivateAccess = "true"))
 	bool bIsCapture = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Capture, Meta = (AllowPrivateAccess = "true"))
-	bool bDroneManualMove = false;
+	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Capture, Meta = (AllowPrivateAccess = "true"))
+	// bool bDroneManualMove = false;
 
 	bool bDroneMode = false;
 
