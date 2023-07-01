@@ -7,10 +7,10 @@ UDSSaveGame::UDSSaveGame()
 {
 	FWaypoint DefaultWayPoint_1;
 	DefaultWayPoint_1.Name = TEXT("웨이포인트#1");
-	DefaultWayPoint_1.Points.Add(FVector(0,0,0));
-	DefaultWayPoint_1.Points.Add(FVector(0,0,0));
-	DefaultWayPoint_1.Points.Add(FVector(0,0,0));
-	DefaultWayPoint_1.Points.Add(FVector(0,0,0));
+	// DefaultWayPoint_1.Points.Add(FVector(0,0,0));
+	// DefaultWayPoint_1.Points.Add(FVector(0,0,0));
+	// DefaultWayPoint_1.Points.Add(FVector(0,0,0));
+	// DefaultWayPoint_1.Points.Add(FVector(0,0,0));
 	
 	WayPointArr.Add(DefaultWayPoint_1);
 

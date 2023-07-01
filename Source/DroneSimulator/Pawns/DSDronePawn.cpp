@@ -111,13 +111,13 @@ void ADSDronePawn::Tick(float DeltaTime)
 	{
 		MoveDrone(DeltaTime);
 	}
-	else
-	{
-		if (CaptureComponent->GetTarget())
-		{
-			SetActorLocation(CaptureComponent->GetTarget()->GetActorTransform().GetLocation());
-		}
-	}
+	// else
+	// {
+	// 	if (CaptureComponent->GetTarget())
+	// 	{
+	// 		SetActorLocation(CaptureComponent->GetTarget()->GetActorTransform().GetLocation());
+	// 	}
+	// }
 
 	if (bIsCapture)
 	{
@@ -247,9 +247,12 @@ void ADSDronePawn::MoveDrone(float DeltaTime)
 void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
 {
 	UDSSaveGame* DroneData = LoadGame();
-	if (DroneData->PilotMode != EPilotMode::E_ManualMode)
+	if (bDroneMode)
 	{
-		return;
+		if (DroneData->PilotMode != EPilotMode::E_ManualMode)
+		{
+			return;
+		}	
 	}
 
 	FVector2D Input = Value.Get<FVector2D>();
@@ -285,13 +288,21 @@ FString ADSDronePawn::GetCaptureInfo()
 void ADSDronePawn::ChangeDroneMode(bool bBoolean)
 {
 	bDroneMode = bBoolean;
-	MeshComponent->SetVisibility(bBoolean);
-	CameraBoom->TargetArmLength = bBoolean ? 400.0f : 2000.0f;
+	//MeshComponent->SetVisibility(bBoolean);
+	CameraBoom->TargetArmLength = 400.0f; //bBoolean ? 400.0f : 2000.0f;
 	CameraBoom->bDoCollisionTest = bBoolean;
 
 	if (bDroneMode)
 	{
-		UDSSaveGame* DroneData = LoadGame();
+		GotoCurrentTarget();
+	}
+}
+
+void ADSDronePawn::GotoCurrentTarget()
+{
+	UDSSaveGame* DroneData = LoadGame();
+	if (DroneData->CurrentTarget!=nullptr)
+	{
 		SetActorLocation(DroneData->CurrentTarget->GetActorLocation() + FVector(0, 0, DroneData->CurrentHeight * 100.0f));
 	}
 }

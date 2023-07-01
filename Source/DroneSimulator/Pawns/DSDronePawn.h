@@ -35,6 +35,8 @@ public:
 	FString GetCaptureInfo();
 	UFUNCTION(BlueprintCallable, Category = "Capture")
 	void ChangeDroneMode(bool bBoolean);
+	UFUNCTION(BlueprintCallable, Category = "Capture")
+	void GotoCurrentTarget();
 
 protected:
 	void ProcessMouseInput(const FInputActionValue& Value);
@@ -114,7 +116,7 @@ private:
 	void ApplyLoadData();
 
 
-	// movment functions
+	// movement functions
 private:
 	void MoveDrone(float DeltaTime);
 	void MoveDroneWithInput(const FInputActionValue& Value);
