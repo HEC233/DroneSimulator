@@ -110,6 +110,7 @@ void ADSDronePawn::Tick(float DeltaTime)
 	if (bDroneMode)
 	{
 		MoveDrone(DeltaTime);
+		MoveDroneWithWaypoint(DeltaTime);
 	}
 	// else
 	// {
@@ -229,10 +230,7 @@ void ADSDronePawn::ApplyLoadData()
 void ADSDronePawn::MoveDrone(float DeltaTime)
 {
 	UDSSaveGame* DroneData = LoadGame();
-	if (DroneData->PilotMode != EPilotMode::E_AutoMode)
-	{
-		return;
-	}
+	if (DroneData->PilotMode != EPilotMode::E_AutoMode) return;
 
 	FVector NewPosition = CenterPosition;
 	CurrentRotationRate = FMath::Fmod((CurrentRotationRate + AngleSpeed * DeltaTime), 2.0f * PI);
@@ -244,17 +242,21 @@ void ADSDronePawn::MoveDrone(float DeltaTime)
 	SetActorLocation(NewPosition);
 }
 
+void ADSDronePawn::MoveDroneWithWaypoint(float DeltaTime)
+{
+	//TODO: 현재 선택된 웨이포인트의 각 포인트들을 순서대로 이동해야함
+	
+	UDSSaveGame* DroneData = LoadGame();
+	if (DroneData->PilotMode != EPilotMode::E_WayPointMode) return;
+	
+	DroneData->CurrentWayPoint.Points; //현재 웨이포인트의 각 포인트(FVector) 들의 배열
+}
+
 void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
 {
 	UDSSaveGame* DroneData = LoadGame();
-	if (bDroneMode)
-	{
-		if (DroneData->PilotMode != EPilotMode::E_ManualMode)
-		{
-			return;
-		}	
-	}
-
+	if (bDroneMode && DroneData->PilotMode != EPilotMode::E_ManualMode) return;
+	
 	FVector2D Input = Value.Get<FVector2D>();
 
 	const FRotator Rotation = CameraBoom->GetComponentRotation();

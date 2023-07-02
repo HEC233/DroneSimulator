@@ -119,6 +119,7 @@ private:
 	// movement functions
 private:
 	void MoveDrone(float DeltaTime);
+	void MoveDroneWithWaypoint(float DeltaTime);
 	void MoveDroneWithInput(const FInputActionValue& Value);
 	void UpdateDroneSpeed();
 
