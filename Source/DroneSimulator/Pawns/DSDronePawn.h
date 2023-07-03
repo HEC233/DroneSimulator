@@ -107,6 +107,9 @@ private:
 	float CaptureSpan;
 	float CaptureTimeDuration;
 
+	// Waypoint
+	int32 CurrentPointIndex = 0;
+
 	// SaveGame
 private:
 	UFUNCTION()

@@ -221,6 +221,7 @@ void ADSDronePawn::ApplyLoadData()
 		CaptureSpeedPerSecond = DroneData->CurrentCaptureSpeed;
 		//bDroneManualMove = !DroneData->AutoPilot;
 
+		CaptureComponent->SetZoomRate(DroneData->CurrentZoomRate);
 		CaptureComponent->SetCameraFOV(DroneData->CurrentFOV);
 	}
 
@@ -244,12 +245,25 @@ void ADSDronePawn::MoveDrone(float DeltaTime)
 
 void ADSDronePawn::MoveDroneWithWaypoint(float DeltaTime)
 {
-	//TODO: 현재 선택된 웨이포인트의 각 포인트들을 순서대로 이동해야함
-	
 	UDSSaveGame* DroneData = LoadGame();
 	if (DroneData->PilotMode != EPilotMode::E_WayPointMode) return;
+	if (DroneData->CurrentWayPoint.Points.IsEmpty()) return;
 	
-	DroneData->CurrentWayPoint.Points; //현재 웨이포인트의 각 포인트(FVector) 들의 배열
+	const float TargetLenght = (DroneData->CurrentWayPoint.Points[CurrentPointIndex] - GetActorLocation()).Size();
+	
+	FVector NewPosition = GetActorLocation() + (DroneData->CurrentWayPoint.Points[CurrentPointIndex] - GetActorLocation()).GetSafeNormal() * DroneSpeed;
+	if (TargetLenght < DroneSpeed) NewPosition = DroneData->CurrentWayPoint.Points[CurrentPointIndex];
+	
+	SetActorLocation(NewPosition);
+
+	if (TargetLenght <= 0.01f)
+	{
+		++CurrentPointIndex;
+		if (CurrentPointIndex >= DroneData->CurrentWayPoint.Points.Num())
+		{
+			CurrentPointIndex = 0;
+		}
+	}
 }
 
 void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
@@ -297,6 +311,7 @@ void ADSDronePawn::ChangeDroneMode(bool bBoolean)
 	if (bDroneMode)
 	{
 		GotoCurrentTarget();
+		CurrentPointIndex = 0;
 	}
 }
 
