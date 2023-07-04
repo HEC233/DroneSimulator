@@ -221,7 +221,7 @@ void ADSDronePawn::ApplyLoadData()
 		CaptureSpeedPerSecond = DroneData->CurrentCaptureSpeed;
 		//bDroneManualMove = !DroneData->AutoPilot;
 
-		CaptureComponent->SetZoomRate(DroneData->CurrentZoomRate);
+		CaptureComponent->SetZoomRate(DroneData->CurrentWayPoint.CurrentZoomRate);
 		CaptureComponent->SetCameraFOV(DroneData->CurrentFOV);
 	}
 

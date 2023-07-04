@@ -25,6 +25,9 @@ struct FWaypoint
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString Name;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+	float CurrentZoomRate = 1.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FVector> Points;
@@ -67,9 +70,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	float CurrentCaptureSpeed = 100.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
-	float CurrentZoomRate = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	TObjectPtr<AActor> CurrentTarget = nullptr;
