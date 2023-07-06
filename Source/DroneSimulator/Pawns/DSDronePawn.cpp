@@ -28,24 +28,32 @@ ADSDronePawn::ADSDronePawn()
 	{
 		MeshComponent->SetStaticMesh(StaticMeshRef.Object);
 	}
-
 	static ConstructorHelpers::FObjectFinder<UInputAction> InputLookAroundAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_LookAround.IA_LookAround'"));
 	if (InputLookAroundAction.Object)
 	{
 		LookAroundAction = InputLookAroundAction.Object;
 	}
-
 	static ConstructorHelpers::FObjectFinder<UInputAction> InputStartCaptureAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_StartCapture.IA_StartCapture'"));
 	if (InputStartCaptureAction.Object)
 	{
 		StartCaptureAction = InputStartCaptureAction.Object;
 	}
-
 	static ConstructorHelpers::FObjectFinder<UInputAction> InputDroneMoveAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_DroneMove.IA_DroneMove'"));
 	if (InputDroneMoveAction.Object)
 	{
 		DroneMoveAction = InputDroneMoveAction.Object;
 	}
+	static ConstructorHelpers::FObjectFinder<UInputAction> InputDroneAltitudeAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_DroneAltitude.IA_DroneAltitude'"));
+	if (InputDroneAltitudeAction.Object)
+	{
+		DroneAltitudeAction = InputDroneAltitudeAction.Object;
+	}
+	static ConstructorHelpers::FObjectFinder<UInputAction> InputDroneCameraZoomAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_DroneZoom.IA_DroneZoom'"));
+	if (InputDroneCameraZoomAction.Object)
+	{
+		DroneCameraZoomAction = InputDroneCameraZoomAction.Object;
+	}
+
 	static ConstructorHelpers::FObjectFinder<UInputMappingContext> InputMappingContextRef(TEXT("/Script/EnhancedInput.InputMappingContext'/Game/DroneSimulator/Input/IMC_Default.IMC_Default'"));
 	if (InputMappingContextRef.Object)
 	{
@@ -159,6 +167,8 @@ void ADSDronePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	EnhancedInputComponent->BindAction(LookAroundAction, ETriggerEvent::Triggered, this, &ADSDronePawn::ProcessMouseInput);
 	EnhancedInputComponent->BindAction(StartCaptureAction, ETriggerEvent::Triggered, this, &ADSDronePawn::StartCapture);
 	EnhancedInputComponent->BindAction(DroneMoveAction, ETriggerEvent::Triggered, this, &ADSDronePawn::MoveDroneWithInput);
+	EnhancedInputComponent->BindAction(DroneAltitudeAction, ETriggerEvent::Triggered, this, &ADSDronePawn::DroneAltitudeInput);
+	EnhancedInputComponent->BindAction(DroneCameraZoomAction, ETriggerEvent::Triggered, this, &ADSDronePawn::CameraZoomInput);
 }
 
 void ADSDronePawn::ProcessMouseInput(const FInputActionValue& Value)
@@ -282,6 +292,20 @@ void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
 	const FVector Movement = ForwardDirection * Input.Y + RightDirection * Input.X;
 
 	SetActorLocation(GetActorLocation() + Movement * DroneSpeed);
+}
+
+void ADSDronePawn::DroneAltitudeInput(const FInputActionValue& Value)
+{
+	float Input = Value.Get<float>();
+
+	SetActorLocation(GetActorLocation() + FVector::UpVector * Input * DroneSpeed);
+}
+
+void ADSDronePawn::CameraZoomInput(const FInputActionValue& Value)
+{
+	float Input = Value.Get<float>();
+
+	CameraBoom->TargetArmLength = FMath::Clamp(CameraBoom->TargetArmLength + Input * 10, 200, 1000);
 }
 
 void ADSDronePawn::UpdateDroneSpeed()
