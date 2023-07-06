@@ -73,6 +73,8 @@ protected:
 	TObjectPtr<class UInputAction> DroneAltitudeAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> DroneCameraZoomAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputAction> DroneSpeedChangeAction;
 
 	// Properties
 private:
@@ -82,8 +84,12 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Movement, Meta = (AllowPrivateAccess = "true"))
 	float RotationRadius;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Movement, Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, Meta = (AllowPrivateAccess = "true"))
 	float DroneSpeed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Movement, Meta = (AllowPrivateAccess = "true"))
+	TArray<float> DroneSpeedArray;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Movement, Meta = (AllowPrivateAccess = "true"))
+	int32 DroneSpeedIndex;
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capture, Meta = (AllowPrivateAccess = "true"))
@@ -130,6 +136,7 @@ private:
 	void MoveDroneWithInput(const FInputActionValue& Value);
 	void DroneAltitudeInput(const FInputActionValue& Value);
 	void CameraZoomInput(const FInputActionValue& Value);
+	void DroneSpeedChange(const FInputActionValue& Value);
 
 	void UpdateDroneSpeed();
 

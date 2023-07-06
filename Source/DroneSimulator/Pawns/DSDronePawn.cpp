@@ -53,6 +53,11 @@ ADSDronePawn::ADSDronePawn()
 	{
 		DroneCameraZoomAction = InputDroneCameraZoomAction.Object;
 	}
+	static ConstructorHelpers::FObjectFinder<UInputAction> InputDroneSpeedChangeAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_DroneSpeedChange.IA_DroneSpeedChange'"));
+	if (InputDroneSpeedChangeAction.Object)
+	{
+		DroneSpeedChangeAction = InputDroneSpeedChangeAction.Object;
+	}
 
 	static ConstructorHelpers::FObjectFinder<UInputMappingContext> InputMappingContextRef(TEXT("/Script/EnhancedInput.InputMappingContext'/Game/DroneSimulator/Input/IMC_Default.IMC_Default'"));
 	if (InputMappingContextRef.Object)
@@ -74,8 +79,15 @@ ADSDronePawn::ADSDronePawn()
 	CaptureComponent->AttachCamera(RootComponent);
 	CaptureComponent->SetCameraPosition(FVector(0.f, 0.f, -15.f));
 
+	DroneSpeedArray.Add(15);
+	DroneSpeedArray.Add(30);
+	DroneSpeedArray.Add(60);
+	DroneSpeedArray.Add(120);
+	DroneSpeedArray.Add(300);
+	DroneSpeedIndex = 2;
+
 	RotationRadius = 10.f;
-	DroneSpeed = 15.f;
+	DroneSpeed = DroneSpeedArray[DroneSpeedIndex];
 }
 
 // Called when the game starts or when spawned
@@ -169,6 +181,7 @@ void ADSDronePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	EnhancedInputComponent->BindAction(DroneMoveAction, ETriggerEvent::Triggered, this, &ADSDronePawn::MoveDroneWithInput);
 	EnhancedInputComponent->BindAction(DroneAltitudeAction, ETriggerEvent::Triggered, this, &ADSDronePawn::DroneAltitudeInput);
 	EnhancedInputComponent->BindAction(DroneCameraZoomAction, ETriggerEvent::Triggered, this, &ADSDronePawn::CameraZoomInput);
+	EnhancedInputComponent->BindAction(DroneSpeedChangeAction, ETriggerEvent::Started, this, &ADSDronePawn::DroneSpeedChange);
 }
 
 void ADSDronePawn::ProcessMouseInput(const FInputActionValue& Value)
@@ -306,6 +319,21 @@ void ADSDronePawn::CameraZoomInput(const FInputActionValue& Value)
 	float Input = Value.Get<float>();
 
 	CameraBoom->TargetArmLength = FMath::Clamp(CameraBoom->TargetArmLength + Input * 10, 200, 1000);
+}
+
+void ADSDronePawn::DroneSpeedChange(const FInputActionValue& Value)
+{
+	float Input = Value.Get<float>();
+
+	if (Input > 0 && DroneSpeedArray.IsValidIndex(DroneSpeedIndex + 1))
+	{
+		DroneSpeedIndex++;
+	}
+	else if (Input < 0 && DroneSpeedArray.IsValidIndex(DroneSpeedIndex - 1))
+	{
+		DroneSpeedIndex--;
+	}
+	DroneSpeed = DroneSpeedArray[DroneSpeedIndex];
 }
 
 void ADSDronePawn::UpdateDroneSpeed()
