@@ -3,6 +3,7 @@
 #include "DSPlayerController.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
+#include "DroneSimulator/UIs/MinimapWidgetBase.h"
 
 ADSPlayerController::ADSPlayerController()
 {
@@ -45,6 +46,15 @@ void ADSPlayerController::ChangeUI(UIStatus UI)
 		break;
 	case UIStatus::Setting:
 		CurrentWidgets.Add(CreateWidget<UUserWidget>(GetWorld(), SettingWidget));
+		{
+			UUserWidget* CreatedMinimapWidget = CreateWidget<UUserWidget>(GetWorld(), MinimapWidget);
+			UMinimapWidgetBase* MinimapWidgetBase = Cast<UMinimapWidgetBase>(CreatedMinimapWidget);
+			if (MinimapWidgetBase)
+			{
+				MinimapWidgetBase->SetMinimapInfo(MinimapImage, MinimapCaptureXCoord, MinimapCaptureYCoord, MinimapCaptureScale);
+			}
+			CurrentWidgets.Add(CreatedMinimapWidget);
+		}
 		SetInputMode(GameAndUI);
 		break;
 	case UIStatus::MapSelect:

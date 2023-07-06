@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "Engine/Texture2D.h"
 #include "DSPlayerController.generated.h"
 
 UENUM(BlueprintType)
@@ -54,6 +55,17 @@ protected:
 	TSubclassOf<UUserWidget> CaptureModeWidget;
 	UPROPERTY(EditAnywhere, Category = "UI Widget")
 	TSubclassOf<UUserWidget> RenderTargetWidget;
+	UPROPERTY(EditAnywhere, Category = "UI Widget")
+	TSubclassOf<UUserWidget> MinimapWidget;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Minimap")
+	TObjectPtr<UTexture2D> MinimapImage;
+	UPROPERTY(BlueprintReadWrite, Category = "Minimap")
+	float MinimapCaptureXCoord;
+	UPROPERTY(BlueprintReadWrite, Category = "Minimap")
+	float MinimapCaptureYCoord;
+	UPROPERTY(BlueprintReadWrite, Category = "Minimap")
+	float MinimapCaptureScale;
 
 	UPROPERTY(BlueprintReadWrite)
 	TArray<AActor*> TargetArray;
