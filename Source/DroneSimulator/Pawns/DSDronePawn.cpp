@@ -102,15 +102,10 @@ void ADSDronePawn::BeginPlay()
 	}
 
 	ApplyLoadData();
-	ChangeDroneMode(false);
+	ChangeDroneMode(EDroneMode::Setting);
 
 	CurrentCaptureCount = 0;
-
 	CurrentRotationRate = 0.0f;
-
-	/*FInputModeGameAndUI GameAndUI;
-	GameAndUI.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
-	PlayerController->SetInputMode(GameAndUI);*/
 }
 
 // Called every frame
@@ -127,18 +122,18 @@ void ADSDronePawn::Tick(float DeltaTime)
 		return;
 	}
 
-	if (bDroneMode)
+	if (!bDroneOperation)
+	{
+		return;
+	}
+	else if (DroneMode == EDroneMode::AutoPilot)
 	{
 		MoveDrone(DeltaTime);
+	}
+	else if (DroneMode == EDroneMode::Waypoint)
+	{
 		MoveDroneWithWaypoint(DeltaTime);
 	}
-	// else
-	// {
-	// 	if (CaptureComponent->GetTarget())
-	// 	{
-	// 		SetActorLocation(CaptureComponent->GetTarget()->GetActorTransform().GetLocation());
-	// 	}
-	// }
 
 	if (bIsCapture)
 	{
@@ -192,7 +187,7 @@ void ADSDronePawn::ProcessMouseInput(const FInputActionValue& Value)
 	FRotator BoomRotator = BoomTransform.Rotator();
 
 	BoomRotator.Yaw = BoomRotator.Yaw + LookAxisVector.X;
-	BoomRotator.Pitch = FMath::Clamp(BoomRotator.Pitch + LookAxisVector.Y, -80.0f, bDroneMode ? 80.0f : -10.0f);
+	BoomRotator.Pitch = FMath::Clamp(BoomRotator.Pitch + LookAxisVector.Y, -80.0f, bDroneOperation ? 80.0f : -10.0f);
 	BoomTransform.SetRotation(BoomRotator.Quaternion());
 
 	CameraBoom->SetRelativeTransform(BoomTransform);
@@ -200,7 +195,7 @@ void ADSDronePawn::ProcessMouseInput(const FInputActionValue& Value)
 
 void ADSDronePawn::StartCapture()
 {
-	if (!bDroneMode)
+	if (!bDroneOperation)
 	{
 		return;
 	}
@@ -242,20 +237,13 @@ void ADSDronePawn::ApplyLoadData()
 		AngleSpeed = DroneData->CurrentMoveSpeed / 60.0f;
 
 		CaptureSpeedPerSecond = DroneData->CurrentCaptureSpeed;
-		//bDroneManualMove = !DroneData->AutoPilot;
-
 		CaptureComponent->SetZoomRate(DroneData->CurrentWayPoint.CurrentZoomRate);
 		CaptureComponent->SetCameraFOV(DroneData->CurrentFOV);
 	}
-
-	//UpdateDroneSpeed();
 }
 
 void ADSDronePawn::MoveDrone(float DeltaTime)
 {
-	UDSSaveGame* DroneData = LoadGame();
-	if (DroneData->PilotMode != EPilotMode::E_AutoMode) return;
-
 	FVector NewPosition = CenterPosition;
 	CurrentRotationRate = FMath::Fmod((CurrentRotationRate + AngleSpeed * DeltaTime), 2.0f * PI);
 	float SinValue, CosValue;
@@ -269,7 +257,6 @@ void ADSDronePawn::MoveDrone(float DeltaTime)
 void ADSDronePawn::MoveDroneWithWaypoint(float DeltaTime)
 {
 	UDSSaveGame* DroneData = LoadGame();
-	if (DroneData->PilotMode != EPilotMode::E_WayPointMode) return;
 	if (DroneData->CurrentWayPoint.Points.IsEmpty()) return;
 	
 	const float TargetLenght = (DroneData->CurrentWayPoint.Points[CurrentPointIndex] - GetActorLocation()).Size();
@@ -291,9 +278,11 @@ void ADSDronePawn::MoveDroneWithWaypoint(float DeltaTime)
 
 void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
 {
-	UDSSaveGame* DroneData = LoadGame();
-	if (bDroneMode && DroneData->PilotMode != EPilotMode::E_ManualMode) return;
-	
+	if (bDroneOperation && DroneMode != EDroneMode::Manual)
+	{
+		return;
+	}
+
 	FVector2D Input = Value.Get<FVector2D>();
 
 	const FRotator Rotation = CameraBoom->GetComponentRotation();
@@ -353,17 +342,21 @@ FString ADSDronePawn::GetCaptureInfo()
 	return FString::Printf(TEXT("캡쳐 진행시간 : %.2f\n현재 캡쳐 수 %d / %d"), CaptureTimeDuration, CurrentCaptureCount, MaxCaptureCount);
 }
 
-void ADSDronePawn::ChangeDroneMode(bool bBoolean)
+void ADSDronePawn::ChangeDroneMode(EDroneMode InDroneMode)
 {
-	bDroneMode = bBoolean;
+	DroneMode = InDroneMode;
+	bDroneOperation = DroneMode != EDroneMode::Setting;
 	//MeshComponent->SetVisibility(bBoolean);
-	CameraBoom->TargetArmLength = 400.0f; //bBoolean ? 400.0f : 2000.0f;
-	CameraBoom->bDoCollisionTest = bBoolean;
+	CameraBoom->bDoCollisionTest = bDroneOperation;
 
-	if (bDroneMode)
+	if (DroneMode == EDroneMode::Waypoint)
 	{
-		GotoCurrentTarget();
-		CurrentPointIndex = 0;
+		UDSSaveGame* DroneData = LoadGame();
+		if (DroneData->CurrentWayPoint.Points.Num() > 0)
+		{
+			SetActorLocation(DroneData->CurrentWayPoint.Points[0]);
+			CurrentPointIndex = 0;
+		}
 	}
 }
 

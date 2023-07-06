@@ -7,6 +7,15 @@
 #include "InputActionValue.h"
 #include "DSDronePawn.generated.h"
 
+UENUM(BlueprintType)
+enum class EDroneMode : uint8
+{
+	Setting,
+	AutoPilot,
+	Manual,
+	Waypoint
+};
+
 UCLASS()
 class DRONESIMULATOR_API ADSDronePawn : public APawn
 {
@@ -34,7 +43,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Capture")
 	FString GetCaptureInfo();
 	UFUNCTION(BlueprintCallable, Category = "Capture")
-	void ChangeDroneMode(bool bBoolean);
+	void ChangeDroneMode(EDroneMode InDroneMode);
 	UFUNCTION(BlueprintCallable, Category = "Capture")
 	void GotoCurrentTarget();
 
@@ -107,7 +116,7 @@ private:
 	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Capture, Meta = (AllowPrivateAccess = "true"))
 	// bool bDroneManualMove = false;
 
-	bool bDroneMode = false;
+	bool bDroneOperation = false;
 
 	// 0 ~ 2pi
 	float CurrentRotationRate;
@@ -139,6 +148,8 @@ private:
 	void DroneSpeedChange(const FInputActionValue& Value);
 
 	void UpdateDroneSpeed();
+
+	EDroneMode DroneMode;
 
 	// AirSim
 private:
