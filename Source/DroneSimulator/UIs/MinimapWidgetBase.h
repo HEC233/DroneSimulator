@@ -53,7 +53,7 @@ private:
 	FVector2d MinimapCoord;
 	float MinimapRotate;
 	FName MinimapName;
-	FName WaypointIndexName;
+	FName WaypointIndexSetName;
 
 	UPROPERTY()
 	TObjectPtr<class AWaypointActor> WpActor;

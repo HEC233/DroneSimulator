@@ -30,7 +30,7 @@ void ADSText3DActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	FVector Direction = GetActorLocation() - UGameplayStatics::GetPlayerPawn(GetWorld(), 0)->GetActorLocation();
+	FVector Direction = GetActorLocation() - UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0)->GetCameraLocation();
 	SetActorRotation(Direction.ToOrientationRotator());
 }
 

@@ -14,7 +14,7 @@
 void UMinimapWidgetBase::SetMinimapInfo(UTexture2D* Image, float ImageXCoord, float ImageYCoord, float ImageScale)
 {
 	MinimapName = FName(TEXT("MinimapImage"));
-	WaypointIndexName = FName(TEXT("WaypointIndex"));
+	WaypointIndexSetName = FName(TEXT("SetIndex"));
 	FProperty* MinimapProp = GetClass()->FindPropertyByName(MinimapName);
 	if (MinimapProp)
 	{
@@ -91,7 +91,8 @@ void UMinimapWidgetBase::UpdateMinimap()
 			}
 
 			CanvasSlot = Cast<UCanvasPanelSlot>(WaypointWidgets[i]->Slot);
-			CanvasSlot->SetPosition(WorldPos2MinimapCoord(WpActor->GetWaypoint().Points[i].Location));
+			FVector2D CalculatedCoord = WorldPos2MinimapCoord(WpActor->GetWaypoint().Points[i].Location);
+			CanvasSlot->SetPosition(FVector2D(FMath::Clamp(CalculatedCoord.X, -200, 200), FMath::Clamp(CalculatedCoord.Y, -200, 200)));
 		}
 		for (int32 i = Idx; i < WaypointWidgets.Num(); ++i)
 		{
@@ -101,12 +102,12 @@ void UMinimapWidgetBase::UpdateMinimap()
 
 		if (WaypointWidgets.Num() > 0)
 		{
-			FProperty* WaypointIndexProp = WaypointWidgets[0]->GetClass()->FindPropertyByName(WaypointIndexName);
-			if (WaypointIndexProp)
+			UFunction* SetIndexFunc = WaypointWidgets[0]->GetClass()->FindFunctionByName(WaypointIndexSetName);
+			if (SetIndexFunc)
 			{
-				for (int32 idx = 0; idx < WaypointWidgets.Num(); ++idx)
+				for (int32 idx = 1; idx <= WaypointWidgets.Num(); ++idx)
 				{
-					WaypointIndexProp->SetValue_InContainer(WaypointWidgets[idx], &idx);
+					WaypointWidgets[idx - 1]->ProcessEvent(SetIndexFunc, &idx);
 				}
 			}
 		}
