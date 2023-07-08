@@ -88,11 +88,6 @@ void UMinimapWidgetBase::UpdateMinimap()
 				CanvasSlot->SetAnchors(FAnchors(0.5f));
 				CanvasSlot->SetAlignment(FVector2D(0.5, 0.5));
 				CanvasSlot->SetSize(FVector2D(30.0, 30.0));
-				FProperty* WaypointIndexProp = WaypointWidgets[i]->GetClass()->FindPropertyByName(WaypointIndexName);
-				if (WaypointIndexProp)
-				{
-					WaypointIndexProp->SetValue_InContainer(WaypointWidgets[i], &i);
-				}
 			}
 
 			CanvasSlot = Cast<UCanvasPanelSlot>(WaypointWidgets[i]->Slot);
@@ -103,6 +98,18 @@ void UMinimapWidgetBase::UpdateMinimap()
 			WaypointWidgets[i]->RemoveFromParent();
 		}
 		WaypointWidgets.SetNum(WpActor->GetWaypoint().Points.Num());
+
+		if (WaypointWidgets.Num() > 0)
+		{
+			FProperty* WaypointIndexProp = WaypointWidgets[0]->GetClass()->FindPropertyByName(WaypointIndexName);
+			if (WaypointIndexProp)
+			{
+				for (int32 idx = 0; idx < WaypointWidgets.Num(); ++idx)
+				{
+					WaypointIndexProp->SetValue_InContainer(WaypointWidgets[idx], &idx);
+				}
+			}
+		}
 	}
 
 	FProperty* MinimapProp = GetClass()->FindPropertyByName(MinimapName);
