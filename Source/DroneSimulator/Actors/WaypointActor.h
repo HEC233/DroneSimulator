@@ -58,7 +58,7 @@ public:
 	void ChangePointLocation(int32 Index, const FVector& Location);
 
 	UFUNCTION(BlueprintCallable, Category = Waypoint)
-	void ChangePointIndex(int32 SrcIdx, int32 DescIdx);
+	bool ChangePointIndex(int32 SrcIdx, int32 DestIdx);
 
 	UFUNCTION(BlueprintCallable, Category = Waypoint)
 	void ChangePointName(int32 Idx, const FString& Name);

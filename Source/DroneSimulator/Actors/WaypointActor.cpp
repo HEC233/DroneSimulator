@@ -119,10 +119,28 @@ void AWaypointActor::ChangePointLocation(int32 Index, const FVector& Location)
 	UpdateWaypoint();
 }
 
-void AWaypointActor::ChangePointIndex(int32 SrcIdx, int32 DescIdx)
+bool AWaypointActor::ChangePointIndex(int32 SrcIdx, int32 DestIdx)
 {
+	auto& Points = WaypointData->Waypoints[WaypointData->WaypointIndex].Points;
 
+	if (!Points.IsValidIndex(SrcIdx) || !Points.IsValidIndex(DestIdx))
+	{
+		return false;
+	}
+
+	FPoint Temp = Points[SrcIdx];
+	if (SrcIdx > DestIdx)
+	{
+		Points.Insert(Temp, DestIdx);
+		Points.RemoveAt(SrcIdx + 1);
+	}
+	else if (SrcIdx < DestIdx)
+	{
+		Points.Insert(Temp, DestIdx + 1);
+		Points.RemoveAt(SrcIdx);
+	}
 	UpdateWaypoint();
+	return true;
 }
 
 void AWaypointActor::ChangePointName(int32 Idx, const FString& Name)
