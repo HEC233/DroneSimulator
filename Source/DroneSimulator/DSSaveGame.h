@@ -18,20 +18,20 @@ enum class EPilotMode : uint8
 	E_WayPointMode,
 };
 
-USTRUCT(BlueprintType)
-struct FWaypoint
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString Name;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
-	float CurrentZoomRate = 1.0f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<FVector> Points;
-};
+//USTRUCT(BlueprintType)
+//struct FWaypoint
+//{
+//	GENERATED_BODY()
+//
+//	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+//	FString Name;
+//
+//	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+//	float CurrentZoomRate = 1.0f;
+//	
+//	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+//	TArray<FVector> Points;
+//};
 
 UCLASS()
 class DRONESIMULATOR_API UDSSaveGame : public USaveGame
@@ -69,14 +69,17 @@ public:
 	float CurrentFOV = 60.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+	float CurrentZoom = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	float CurrentCaptureSpeed = 100.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	TObjectPtr<AActor> CurrentTarget = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	TArray<FWaypoint> WayPointArr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
-	FWaypoint CurrentWayPoint;
+	FWaypoint CurrentWayPoint;*/
 };

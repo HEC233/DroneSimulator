@@ -8,7 +8,8 @@
 #include "Components/CanvasPanelSlot.h" 
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "DroneSimulator/DSSaveGame.h"
+#include "DroneSimulator/Actors/WaypointActor.h"
+#include "DroneSimulator/Save/WaypointSaveGame.h"
 
 void UMinimapWidgetBase::SetMinimapInfo(UTexture2D* Image, float ImageXCoord, float ImageYCoord, float ImageScale)
 {
@@ -55,6 +56,13 @@ void UMinimapWidgetBase::SetPlayerActor(AActor* InPlayerActor)
 
 void UMinimapWidgetBase::UpdateMinimap()
 {
+	if (nullptr == WpActor)
+	{
+		if (SetWaypointActor() == false)
+		{
+			return;
+		}
+	}
 	if (PlayerSpringArm)
 	{
 		MinimapRotate = -PlayerSpringArm->GetComponentRotation().Yaw;
@@ -68,9 +76,8 @@ void UMinimapWidgetBase::UpdateMinimap()
 	}
 	if (MinimapPanel)
 	{
-		const UDSSaveGame* Save = Cast<UDSSaveGame>(UGameplayStatics::LoadGameFromSlot("SaveSetting", 0));
 		int32 Idx = 0;
-		for (int32 i = 0; i < Save->CurrentWayPoint.Points.Num(); ++i, ++Idx)
+		for (int32 i = 0; i < WpActor->GetWaypoint().Points.Num(); ++i, ++Idx)
 		{
 			UCanvasPanelSlot* CanvasSlot;
 			if (!WaypointWidgets.IsValidIndex(i))
@@ -89,13 +96,13 @@ void UMinimapWidgetBase::UpdateMinimap()
 			}
 
 			CanvasSlot = Cast<UCanvasPanelSlot>(WaypointWidgets[i]->Slot);
-			CanvasSlot->SetPosition(WorldPos2MinimapCoord(Save->CurrentWayPoint.Points[i]));
+			CanvasSlot->SetPosition(WorldPos2MinimapCoord(WpActor->GetWaypoint().Points[i].Location));
 		}
 		for (int32 i = Idx; i < WaypointWidgets.Num(); ++i)
 		{
 			WaypointWidgets[i]->RemoveFromParent();
 		}
-		WaypointWidgets.SetNum(Save->CurrentWayPoint.Points.Num());
+		WaypointWidgets.SetNum(WpActor->GetWaypoint().Points.Num());
 	}
 
 	FProperty* MinimapProp = GetClass()->FindPropertyByName(MinimapName);
@@ -114,4 +121,16 @@ void UMinimapWidgetBase::UpdateMinimap()
 float UMinimapWidgetBase::GetZoomRate_Implementation()
 {
 	return 1.0f;
+}
+
+bool UMinimapWidgetBase::SetWaypointActor()
+{
+	TArray<AActor*> OutActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AWaypointActor::StaticClass(), OutActors);
+	if (OutActors.Num() > 0)
+	{
+		WpActor = Cast<AWaypointActor>(OutActors[0]);
+		return true;
+	}
+	return false;
 }

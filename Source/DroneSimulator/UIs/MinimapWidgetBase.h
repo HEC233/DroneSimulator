@@ -37,6 +37,9 @@ protected:
 	TObjectPtr<UPanelWidget> MinimapPanel;
 
 private:
+	bool SetWaypointActor();
+
+private:
 	FVector2d MinimapCaptureLocation;
 	float MinimapCaptureScale;
 
@@ -51,4 +54,7 @@ private:
 	float MinimapRotate;
 	FName MinimapName;
 	FName WaypointIndexName;
+
+	UPROPERTY()
+	TObjectPtr<class AWaypointActor> WpActor;
 };

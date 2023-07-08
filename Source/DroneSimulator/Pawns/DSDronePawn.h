@@ -129,6 +129,13 @@ private:
 	// Waypoint
 	int32 CurrentPointIndex = 0;
 
+	UPROPERTY(BlueprintReadOnly, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class AWaypointActor> WpActor;
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Waypoint")
+	void MakeWaypointActorValid();
+
 	// SaveGame
 private:
 	UFUNCTION()

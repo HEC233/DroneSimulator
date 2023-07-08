@@ -11,6 +11,8 @@
 #include "DroneSimulator/DSSaveGame.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/LocalPlayer.h"
+#include "DroneSimulator/Actors/WaypointActor.h"
+#include "DroneSimulator/Save/WaypointSaveGame.h"
 
 #include "DroneSimulator/Components/DSCaptureComponent.h"
 
@@ -101,8 +103,7 @@ void ADSDronePawn::BeginPlay()
 		Subsystem->AddMappingContext(DefaultMappingContext, 0);
 	}
 
-	ApplyLoadData();
-	ChangeDroneMode(EDroneMode::Setting);
+	MakeWaypointActorValid();
 
 	CurrentCaptureCount = 0;
 	CurrentRotationRate = 0.0f;
@@ -214,6 +215,25 @@ void ADSDronePawn::StartCapture()
 	}
 }
 
+void ADSDronePawn::MakeWaypointActorValid()
+{
+	if (WpActor != nullptr && WpActor->IsValidLowLevel())
+	{
+		return;
+	}
+
+	TArray<AActor*> OutActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AWaypointActor::StaticClass(), OutActors);
+	if (OutActors.Num() > 0)
+	{
+		WpActor = Cast<AWaypointActor>(OutActors[0]);
+	}
+	else
+	{
+		WpActor = GetWorld()->SpawnActor<AWaypointActor>();
+	}
+}
+
 UDSSaveGame* ADSDronePawn::LoadGame()
 {
 	const auto SaveSlot = Cast<UDSSaveGame>(UGameplayStatics::LoadGameFromSlot("SaveSetting", 0));
@@ -237,8 +257,15 @@ void ADSDronePawn::ApplyLoadData()
 		AngleSpeed = DroneData->CurrentMoveSpeed / 60.0f;
 
 		CaptureSpeedPerSecond = DroneData->CurrentCaptureSpeed;
-		CaptureComponent->SetZoomRate(DroneData->CurrentWayPoint.CurrentZoomRate);
 		CaptureComponent->SetCameraFOV(DroneData->CurrentFOV);
+		if (DroneMode == EDroneMode::Waypoint)
+		{
+			CaptureComponent->SetZoomRate(WpActor->GetWaypoint().ZoomRate);
+		}
+		else
+		{
+			CaptureComponent->SetZoomRate(DroneData->CurrentZoom);
+		}
 	}
 }
 
@@ -257,19 +284,19 @@ void ADSDronePawn::MoveDrone(float DeltaTime)
 void ADSDronePawn::MoveDroneWithWaypoint(float DeltaTime)
 {
 	UDSSaveGame* DroneData = LoadGame();
-	if (DroneData->CurrentWayPoint.Points.IsEmpty()) return;
+	if (WpActor->GetWaypoint().Points.IsEmpty()) return;
 	
-	const float TargetLenght = (DroneData->CurrentWayPoint.Points[CurrentPointIndex] - GetActorLocation()).Size();
+	const float TargetLenght = (WpActor->GetWaypoint().Points[CurrentPointIndex].Location - GetActorLocation()).Size();
 	
-	FVector NewPosition = GetActorLocation() + (DroneData->CurrentWayPoint.Points[CurrentPointIndex] - GetActorLocation()).GetSafeNormal() * DroneSpeed;
-	if (TargetLenght < DroneSpeed) NewPosition = DroneData->CurrentWayPoint.Points[CurrentPointIndex];
+	FVector NewPosition = GetActorLocation() + (WpActor->GetWaypoint().Points[CurrentPointIndex].Location - GetActorLocation()).GetSafeNormal() * DroneSpeed;
+	if (TargetLenght < DroneSpeed) NewPosition = WpActor->GetWaypoint().Points[CurrentPointIndex].Location;
 	
 	SetActorLocation(NewPosition);
 
 	if (TargetLenght <= 0.01f)
 	{
 		++CurrentPointIndex;
-		if (CurrentPointIndex >= DroneData->CurrentWayPoint.Points.Num())
+		if (CurrentPointIndex >= WpActor->GetWaypoint().Points.Num())
 		{
 			CurrentPointIndex = 0;
 		}
@@ -352,9 +379,9 @@ void ADSDronePawn::ChangeDroneMode(EDroneMode InDroneMode)
 	if (DroneMode == EDroneMode::Waypoint)
 	{
 		UDSSaveGame* DroneData = LoadGame();
-		if (DroneData->CurrentWayPoint.Points.Num() > 0)
+		if (WpActor->GetWaypoint().Points.Num() > 0)
 		{
-			SetActorLocation(DroneData->CurrentWayPoint.Points[0]);
+			SetActorLocation(WpActor->GetWaypoint().Points[0].Location);
 			CurrentPointIndex = 0;
 		}
 	}
