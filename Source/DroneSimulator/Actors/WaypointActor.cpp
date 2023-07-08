@@ -4,6 +4,7 @@
 #include "WaypointActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "DroneSimulator/Save/WaypointSaveGame.h"
+#include "DSText3DActor.h"
 
 // Sets default values
 AWaypointActor::AWaypointActor()
@@ -135,8 +136,12 @@ void AWaypointActor::ChangePointName(int32 Idx, const FString& Name)
 
 void AWaypointActor::SetDroneOperation(bool bOperate)
 {
+	for (auto& Actor : WaypointActors)
+	{
+		Actor->SetActorHiddenInGame(bOperate);
+	}
 
-	UpdateWaypoint();
+	//UpdateWaypoint();
 }
 
 void AWaypointActor::SetZoomRate(float ZoomRate)
@@ -156,5 +161,20 @@ void AWaypointActor::SaveGame()
 
 void AWaypointActor::UpdateWaypoint()
 {
+	int32 Idx = 0;
+	for (int32 i = 0; i < WaypointData->Waypoints[WaypointData->WaypointIndex].Points.Num(); ++i, ++Idx)
+	{
+		if (!WaypointActors.IsValidIndex(i))
+		{
+			WaypointActors.Emplace(GetWorld()->SpawnActor<ADSText3DActor>());
+		}
+		WaypointActors[i]->SetText(FString::Printf(TEXT("%d"), i + 1));
+		WaypointActors[i]->SetActorLocation(WaypointData->Waypoints[WaypointData->WaypointIndex].Points[i].Location);
+	}
+	for (int32 i = Idx; i < WaypointActors.Num(); ++i)
+	{
+		WaypointActors[i]->Destroy();
+	}
+	WaypointActors.SetNum(WaypointData->Waypoints[WaypointData->WaypointIndex].Points.Num());
 }
 

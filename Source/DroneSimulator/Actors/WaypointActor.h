@@ -82,6 +82,6 @@ private:
 	UPROPERTY()
 	TObjectPtr<class UWaypointSaveGame> WaypointData;
 	UPROPERTY()
-	TArray<TObjectPtr<AActor>> WaypointActors;
+	TArray<TObjectPtr<class ADSText3DActor>> WaypointActors;
 	FString LevelName;
 };
