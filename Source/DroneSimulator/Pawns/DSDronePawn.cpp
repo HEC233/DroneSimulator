@@ -81,11 +81,11 @@ ADSDronePawn::ADSDronePawn()
 	CaptureComponent->AttachCamera(RootComponent);
 	CaptureComponent->SetCameraPosition(FVector(0.f, 0.f, -15.f));
 
-	DroneSpeedArray.Add(15);
-	DroneSpeedArray.Add(30);
-	DroneSpeedArray.Add(60);
-	DroneSpeedArray.Add(120);
 	DroneSpeedArray.Add(300);
+	DroneSpeedArray.Add(600);
+	DroneSpeedArray.Add(1200);
+	DroneSpeedArray.Add(2400);
+	DroneSpeedArray.Add(6000);
 	DroneSpeedIndex = 2;
 
 	RotationRadius = 10.f;
@@ -283,24 +283,24 @@ void ADSDronePawn::MoveDrone(float DeltaTime)
 
 void ADSDronePawn::MoveDroneWithWaypoint(float DeltaTime)
 {
-	UDSSaveGame* DroneData = LoadGame();
 	if (WpActor->GetWaypoint().Points.IsEmpty()) return;
 	
-	const float TargetLenght = (WpActor->GetWaypoint().Points[CurrentPointIndex].Location - GetActorLocation()).Size();
+	const FVector Direction = WpActor->GetWaypoint().Points[CurrentPointIndex].Location - GetActorLocation();
+	const float TargetLenght = Direction.Size();
 	
-	FVector NewPosition = GetActorLocation() + (WpActor->GetWaypoint().Points[CurrentPointIndex].Location - GetActorLocation()).GetSafeNormal() * DroneSpeed;
-	if (TargetLenght < DroneSpeed) NewPosition = WpActor->GetWaypoint().Points[CurrentPointIndex].Location;
-	
-	SetActorLocation(NewPosition);
-
-	if (TargetLenght <= 0.01f)
+	FVector NewPosition = GetActorLocation() + Direction.GetSafeNormal() * DroneSpeed * DeltaTime;
+	if (TargetLenght < DroneSpeed * DeltaTime)
 	{
+		NewPosition = WpActor->GetWaypoint().Points[CurrentPointIndex].Location;
+
 		++CurrentPointIndex;
 		if (CurrentPointIndex >= WpActor->GetWaypoint().Points.Num())
 		{
 			CurrentPointIndex = 0;
 		}
 	}
+	
+	SetActorLocation(NewPosition);
 }
 
 void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
@@ -320,14 +320,14 @@ void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
 
 	const FVector Movement = ForwardDirection * Input.Y + RightDirection * Input.X;
 
-	SetActorLocation(GetActorLocation() + Movement * DroneSpeed);
+	SetActorLocation(GetActorLocation() + Movement * DroneSpeed * GetWorld()->DeltaTimeSeconds);
 }
 
 void ADSDronePawn::DroneAltitudeInput(const FInputActionValue& Value)
 {
 	float Input = Value.Get<float>();
 
-	SetActorLocation(GetActorLocation() + FVector::UpVector * Input * DroneSpeed);
+	SetActorLocation(GetActorLocation() + FVector::UpVector * Input * DroneSpeed * GetWorld()->DeltaTimeSeconds);
 }
 
 void ADSDronePawn::CameraZoomInput(const FInputActionValue& Value)
