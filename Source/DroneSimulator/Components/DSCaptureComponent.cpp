@@ -45,6 +45,7 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 		return;
 	}
 
+	LookTarget();
 	const FDateTime CurrentTime = FDateTime::Now();
 	const FString TimeString = CurrentTime.ToString(TEXT("%Y.%m.%d-%H.%M.%S"));
 	FString TargetName = CaptureTargetActor->GetActorNameOrLabel();
@@ -61,7 +62,6 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	FPaths::MakeStandardFilename(TextFilePath);
 
 	//SceneCapture->CaptureScene();
-
 	FArchive* RawFileWriterAr = IFileManager::Get().CreateFileWriter(*ImageFilePath);
 	if (RawFileWriterAr == nullptr)
 	{
@@ -71,11 +71,11 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	bool ImageSavedOK = ExportRenderTargetJPG(RenderTarget, *RawFileWriterAr);
 	RawFileWriterAr->Close();
 
-	FVector2f Min, Max;
+	FVector2D Min, Max;
 	CalculateNDCMinMax(Min, Max);
 
-	Min = (Min / 2) + FVector2f(0.5f, 0.5f);
-	Max = (Max / 2) + FVector2f(0.5f, 0.5f);
+	Min = (Min / 2) + FVector2D(0.5f, 0.5f);
+	Max = (Max / 2) + FVector2D(0.5f, 0.5f);
 
 	Min.X *= RenderTarget->SizeX;
 	Max.X *= RenderTarget->SizeX;
@@ -92,9 +92,13 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	Min = Center + (Min - Center) * BoxSizeMultiplier;
 	Max = Center + (Max - Center) * BoxSizeMultiplier;*/
 
+	int32 MinX = FMath::FloorToInt(Min.X);
+	int32 MinY = FMath::FloorToInt(Min.Y);
+	int32 MaxX = FMath::CeilToInt(Max.X);
+	int32 MaxY = FMath::CeilToInt(Max.Y);
+
 	UE_LOG(LogTemp, Log, TEXT("Min: %s, Max: %s"), *Min.ToString(), *Max.ToString());
-	FString LabelingText = FString::Printf(TEXT("%s,%d,%d,%d,%d"), *TargetName,
-		FMath::FloorToInt(Min.X), FMath::FloorToInt(Min.Y), FMath::CeilToInt(Max.X - Min.X), FMath::CeilToInt(Max.Y - Min.Y));
+	FString LabelingText = FString::Printf(TEXT("%s,%d,%d,%d,%d"), *TargetName, MinX, MinY, MaxX - MinX, MaxY - MinY);
 	FFileHelper::SaveStringToFile(*LabelingText, *TextFilePath);
 
 	if (ImageSavedOK)
@@ -139,7 +143,12 @@ void UDSCaptureComponent::SetZoomRate(float InZoomRate)
 	SetFinalFOV();
 }
 
-void UDSCaptureComponent::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax)
+void UDSCaptureComponent::SetCaptureTick(bool bValue)
+{
+	SceneCapture->bCaptureEveryFrame = bValue;
+}
+
+void UDSCaptureComponent::CalculateNDCMinMax(FVector2D& OutMin, FVector2D& OutMax)
 {
 	if (CaptureTargetActor == nullptr)
 	{
@@ -147,10 +156,10 @@ void UDSCaptureComponent::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMa
 		return;
 	}
 
-	OutMin = FVector2f(TNumericLimits<float>::Max(), TNumericLimits<float>::Max());
-	OutMax = FVector2f(TNumericLimits<float>::Min(), TNumericLimits<float>::Min());
+	OutMin = FVector2D(TNumericLimits<double>::Max(), TNumericLimits<double>::Max());
+	OutMax = FVector2D(TNumericLimits<double>::Min(), TNumericLimits<double>::Min());
 
-	TArray<UActorComponent*> StaticMeshComponents;
+	TArray<UStaticMeshComponent*> CapturingMeshComponents;
 	TArray<AActor*> AttachedActors;
 
 	CaptureTargetActor->GetAttachedActors(AttachedActors, true, true);
@@ -158,21 +167,13 @@ void UDSCaptureComponent::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMa
 
 	for (AActor* Actor : AttachedActors)
 	{
-		TArray<USceneComponent*> SceneComps;
-		Actor->GetComponents<USceneComponent>(SceneComps);
-		for (USceneComponent* Component : SceneComps)
+		TArray<UStaticMeshComponent*> Components;
+		Actor->GetComponents<UStaticMeshComponent>(Components);
+		for (UStaticMeshComponent* Component : Components)
 		{
-			if (Component->IsVisible())
+			if (Component->IsVisible() && !Component->ComponentHasTag(TargetFilteringName))
 			{
-				TArray<UStaticMeshComponent*> Components;
-				Actor->GetComponents<UStaticMeshComponent>(Components);
-				for (UStaticMeshComponent* MeshComponent : Components)
-				{
-					if (!MeshComponent->ComponentHasTag(TargetFilteringName))
-					{
-						StaticMeshComponents.Emplace(MeshComponent);
-					}
-				}
+				CapturingMeshComponents.Emplace(Component);
 			}
 		}
 		/*TArray<UStaticMeshComponent*> Components;
@@ -196,10 +197,10 @@ void UDSCaptureComponent::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMa
 	//}
 
 	FMatrix ViewProjectionMatrix = FMatrix::Identity;
-	const FTransform SceneCaptureTransform = SceneCapture->GetComponentTransform();
 	FMinimalViewInfo ViewInfo;
 	SceneCapture->GetCameraView(0.0f, ViewInfo);
-	const FMatrix ViewMatrix = FTranslationMatrix(-SceneCaptureTransform.GetLocation()) * FInverseRotationMatrix(SceneCaptureTransform.Rotator()) * FMatrix(
+	ViewInfo.AspectRatio = RenderTarget->SizeX / RenderTarget->SizeY;
+	const FMatrix ViewMatrix = FTranslationMatrix(-SceneCapture->GetComponentLocation()) * FInverseRotationMatrix(SceneCapture->GetComponentRotation()) * FMatrix(
 		FPlane(0, 0, 1, 0),
 		FPlane(1, 0, 0, 0),
 		FPlane(0, 1, 0, 0),
@@ -207,26 +208,24 @@ void UDSCaptureComponent::CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMa
 	const FMatrix ProjectionMatrix = ViewInfo.CalculateProjectionMatrix();
 	ViewProjectionMatrix = ViewMatrix * ProjectionMatrix;
 
-	for (UActorComponent* ActorComponent : StaticMeshComponents)
+	for (UStaticMeshComponent* MeshComp : CapturingMeshComponents)
 	{
-		UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(ActorComponent);
-
-		FBox BoundingBox = StaticMeshComp->GetStaticMesh()->GetBoundingBox();
+		FBoxSphereBounds Bounds = MeshComp->GetStaticMesh()->GetBounds();
 
 		TArray<FVector> Points;
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Min.X, BoundingBox.Min.Y, BoundingBox.Min.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Min.X, BoundingBox.Min.Y, BoundingBox.Max.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Min.X, BoundingBox.Max.Y, BoundingBox.Min.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Min.X, BoundingBox.Max.Y, BoundingBox.Max.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Max.X, BoundingBox.Min.Y, BoundingBox.Min.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Max.X, BoundingBox.Min.Y, BoundingBox.Max.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Max.X, BoundingBox.Max.Y, BoundingBox.Min.Z)));
-		Points.Add(StaticMeshComp->GetRenderMatrix().TransformPosition(FVector(BoundingBox.Max.X, BoundingBox.Max.Y, BoundingBox.Max.Z)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(1, 1, 1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(1, 1, -1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(1, -1, 1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(1, -1, -1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(-1, 1, 1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(-1, 1, -1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(-1, -1, 1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(-1, -1, -1)));
 
 		for (FVector& Point : Points)
 		{
 			FVector4 ClipCoordinate = ViewProjectionMatrix.TransformPosition(Point);
-			FVector NDCCoordinate = FVector(ClipCoordinate.X, ClipCoordinate.Y, ClipCoordinate.Z) / ClipCoordinate.W;
+			FVector2d NDCCoordinate = FVector2d(ClipCoordinate.X, ClipCoordinate.Y) / ClipCoordinate.W;
 
 			OutMin.X = FMath::Min(NDCCoordinate.X, OutMin.X);
 			OutMin.Y = FMath::Min(NDCCoordinate.Y, OutMin.Y);

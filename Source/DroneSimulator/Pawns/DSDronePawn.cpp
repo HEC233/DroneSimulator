@@ -362,6 +362,7 @@ void ADSDronePawn::UpdateDroneSpeed()
 void ADSDronePawn::ChangeCaptureState(bool bBoolean)
 {
 	bIsCapture = bBoolean;
+	//CaptureComponent->SetCaptureTick(!bBoolean);
 }
 
 FString ADSDronePawn::GetCaptureInfo()

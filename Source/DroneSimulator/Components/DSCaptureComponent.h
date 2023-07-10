@@ -43,9 +43,10 @@ public:
 
 	void SetCameraFOV(float FOV);
 	void SetZoomRate(float InZoomRate);
+	void SetCaptureTick(bool bValue);
 
 private:
-	void CalculateNDCMinMax(FVector2f& OutMin, FVector2f& OutMax);
+	void CalculateNDCMinMax(FVector2D& OutMin, FVector2D& OutMax);
 	bool ExportRenderTargetJPG(class UTextureRenderTarget2D* TexRT, FArchive& Ar);
 	void LookTarget();
 
