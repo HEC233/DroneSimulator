@@ -56,6 +56,7 @@ void UMinimapWidgetBase::SetPlayerActor(AActor* InPlayerActor)
 
 void UMinimapWidgetBase::UpdateMinimap()
 {
+	check(WaypointWidget != nullptr && WayLineWidget != nullptr);
 	if (nullptr == WpActor)
 	{
 		if (SetWaypointActor() == false)
@@ -76,29 +77,72 @@ void UMinimapWidgetBase::UpdateMinimap()
 	}
 	if (MinimapPanel)
 	{
-		int32 Idx = 0;
-		for (int32 i = 0; i < WpActor->GetWaypoint().Points.Num(); ++i, ++Idx)
+		TArray<FVector2D> WaypointPoses;
+		WaypointPoses.Reserve(WpActor->GetWaypoint().Points.Num());
+		for (int32 i = 0; i < WpActor->GetWaypoint().Points.Num(); ++i)
 		{
-			UCanvasPanelSlot* CanvasSlot;
-			if (!WaypointWidgets.IsValidIndex(i))
-			{
-				WaypointWidgets.Emplace(CreateWidget<UUserWidget>(GetWorld(), WaypointWidget));
-				MinimapPanel->AddChild(WaypointWidgets[i]);
-				CanvasSlot = Cast<UCanvasPanelSlot>(WaypointWidgets[i]->Slot);
-				CanvasSlot->SetAnchors(FAnchors(0.5f));
-				CanvasSlot->SetAlignment(FVector2D(0.5, 0.5));
-				CanvasSlot->SetSize(FVector2D(30.0, 30.0));
-			}
-
-			CanvasSlot = Cast<UCanvasPanelSlot>(WaypointWidgets[i]->Slot);
 			FVector2D CalculatedCoord = WorldPos2MinimapCoord(WpActor->GetWaypoint().Points[i].Location);
-			CanvasSlot->SetPosition(FVector2D(FMath::Clamp(CalculatedCoord.X, -200, 200), FMath::Clamp(CalculatedCoord.Y, -200, 200)));
+			WaypointPoses.Emplace(CalculatedCoord);
 		}
-		for (int32 i = Idx; i < WaypointWidgets.Num(); ++i)
-		{
-			WaypointWidgets[i]->RemoveFromParent();
+
+		{	// Way Line UI Setting
+			UCanvasPanelSlot* CanvasSlot;
+			if (WaypointPoses.Num() != PrevWaypointCount)
+			{
+				for (UUserWidget* Widget : WayLineWidgets)
+				{
+					Widget->RemoveFromParent();
+				}
+				WayLineWidgets.Empty(WaypointPoses.Num());
+
+				for (int32 i = 0; i < WaypointPoses.Num(); ++i)
+				{
+					WayLineWidgets.Emplace(CreateWidget<UUserWidget>(GetWorld(), WayLineWidget));
+					MinimapPanel->AddChild(WayLineWidgets[i]);
+					WayLineWidgets[i]->SetRenderTransformPivot(FVector2D(0.0, 0.5));
+					CanvasSlot = Cast<UCanvasPanelSlot>(WayLineWidgets[i]->Slot);
+					CanvasSlot->SetAnchors(FAnchors(0.5f));
+					CanvasSlot->SetAlignment(FVector2D(0.0, 0.5));
+				}
+			}
+			for (int32 i = 0; i < WaypointPoses.Num(); ++i)
+			{
+				CanvasSlot = Cast<UCanvasPanelSlot>(WayLineWidgets[i]->Slot);
+				FVector2D Diff = WaypointPoses[WaypointPoses.IsValidIndex(i + 1) ? i + 1 : 0] - WaypointPoses[i];
+				CanvasSlot->SetSize(FVector2D(Diff.Length(), 10.0));
+				CanvasSlot->SetPosition(WaypointPoses[i]);
+				WayLineWidgets[i]->SetRenderTransformAngle(FMath::RadiansToDegrees(FMath::Atan2(Diff.Y, Diff.X)));
+			}
 		}
-		WaypointWidgets.SetNum(WpActor->GetWaypoint().Points.Num());
+
+		{	// Waypoint UI Setting
+			UCanvasPanelSlot* CanvasSlot;
+			if (WaypointPoses.Num() != PrevWaypointCount)
+			{
+				for (UUserWidget* Widget : WaypointWidgets)
+				{
+					Widget->RemoveFromParent();
+				}
+				WaypointWidgets.Empty(WaypointPoses.Num());
+
+				for (int32 i = 0; i < WaypointPoses.Num(); ++i)
+				{
+					WaypointWidgets.Emplace(CreateWidget<UUserWidget>(GetWorld(), WaypointWidget));
+					MinimapPanel->AddChild(WaypointWidgets[i]);
+					CanvasSlot = Cast<UCanvasPanelSlot>(WaypointWidgets[i]->Slot);
+					CanvasSlot->SetAnchors(FAnchors(0.5f));
+					CanvasSlot->SetAlignment(FVector2D(0.5, 0.5));
+					CanvasSlot->SetSize(FVector2D(30.0, 30.0));
+				}
+			}
+			for (int32 i = 0; i < WaypointPoses.Num(); ++i)
+			{
+				CanvasSlot = Cast<UCanvasPanelSlot>(WaypointWidgets[i]->Slot);
+				CanvasSlot->SetPosition(FVector2D(FMath::Clamp(WaypointPoses[i].X, -200, 200), FMath::Clamp(WaypointPoses[i].Y, -200, 200)));
+			}
+		}
+
+		PrevWaypointCount = WaypointPoses.Num();
 
 		if (WaypointWidgets.Num() > 0)
 		{

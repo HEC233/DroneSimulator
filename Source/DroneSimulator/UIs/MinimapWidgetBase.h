@@ -34,6 +34,8 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Widget")
 	TSubclassOf<UUserWidget> WaypointWidget;
 	UPROPERTY(EditAnywhere, Category = "Widget")
+	TSubclassOf<UUserWidget> WayLineWidget;
+	UPROPERTY(EditAnywhere, Category = "Widget")
 	TObjectPtr<UPanelWidget> MinimapPanel;
 
 private:
@@ -49,11 +51,14 @@ private:
 	TObjectPtr<class USpringArmComponent> PlayerSpringArm;
 	UPROPERTY()
 	TArray<TObjectPtr<UUserWidget>> WaypointWidgets;
+	UPROPERTY()
+	TArray<TObjectPtr<UUserWidget>> WayLineWidgets;
 
 	FVector2d MinimapCoord;
 	float MinimapRotate;
 	FName MinimapName;
 	FName WaypointIndexSetName;
+	int32 PrevWaypointCount = 0;
 
 	UPROPERTY()
 	TObjectPtr<class AWaypointActor> WpActor;
