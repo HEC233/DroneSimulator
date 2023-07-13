@@ -80,6 +80,7 @@ DerivedDataCache/*
 Content/*
 !Content/DroneSimulator
 !Content/UI
+!Content/Tank
 
 # AirSim Plugin
 Plugins/AirSim/* 
