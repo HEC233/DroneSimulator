@@ -56,8 +56,8 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 		NameProp->GetValue_InContainer(CaptureTargetActor, &TargetName);
 	}
 
-	FString ImageFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%d - %s Image - %s.jpg"), CaptureIndex, *TargetName, *TimeString));
-	FString TextFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%d - %s Image - %s.txt"), CaptureIndex, *TargetName, *TimeString));
+	FString ImageFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%06d - %s Image - %s.jpg"), CaptureIndex, *TargetName, *TimeString));
+	FString TextFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%06d - %s Image - %s.txt"), CaptureIndex, *TargetName, *TimeString));
 	FPaths::MakeStandardFilename(ImageFilePath);
 	FPaths::MakeStandardFilename(TextFilePath);
 
@@ -97,8 +97,13 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	int32 MaxX = FMath::CeilToInt(Max.X);
 	int32 MaxY = FMath::CeilToInt(Max.Y);
 
+	int32 StringSharpIdx;
+	if (!TargetName.FindChar(TCHAR('#'), StringSharpIdx))
+	{
+		StringSharpIdx = TargetName.Len();
+	}
 	UE_LOG(LogTemp, Log, TEXT("Min: %s, Max: %s"), *Min.ToString(), *Max.ToString());
-	FString LabelingText = FString::Printf(TEXT("%s,%d,%d,%d,%d"), *TargetName, MinX, MinY, MaxX - MinX, MaxY - MinY);
+	FString LabelingText = FString::Printf(TEXT("%s,%d,%d,%d,%d"), *TargetName.Mid(0, StringSharpIdx), MinX, MinY, MaxX - MinX, MaxY - MinY);
 	FFileHelper::SaveStringToFile(*LabelingText, *TextFilePath);
 
 	if (ImageSavedOK)
