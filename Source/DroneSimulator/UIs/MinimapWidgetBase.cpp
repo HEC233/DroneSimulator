@@ -31,6 +31,21 @@ void UMinimapWidgetBase::SetMinimapInfo(UTexture2D* Image, float ImageXCoord, fl
 		MinimapPanelProp->GetValue_InContainer(this, &MinimapPanel);
 	}
 	check(MinimapPanel != nullptr);
+
+	// Preset List Set
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), PresetActor, PresetActors);
+	PresetWidgets.Empty(PresetActors.Num());
+
+	UCanvasPanelSlot* CanvasSlot; 
+	for (int32 i = 0; i < PresetActors.Num(); ++i)
+	{
+		PresetWidgets.Emplace(CreateWidget<UUserWidget>(GetWorld(), PresetWidget));
+		MinimapPanel->AddChild(PresetWidgets[i]);
+		CanvasSlot = Cast<UCanvasPanelSlot>(PresetWidgets[i]->Slot);
+		CanvasSlot->SetAnchors(FAnchors(0.5f));
+		CanvasSlot->SetAlignment(FVector2D(0.5, 0.5));
+		CanvasSlot->SetSize(FVector2D(50.0, 50.0));
+	}
 }
 
 FVector2D UMinimapWidgetBase::WorldPos2MinimapCoord(const FVector& WorldPos)
@@ -83,6 +98,15 @@ void UMinimapWidgetBase::UpdateMinimap()
 		{
 			FVector2D CalculatedCoord = WorldPos2MinimapCoord(WpActor->GetWaypoint().Points[i].Location);
 			WaypointPoses.Emplace(CalculatedCoord);
+		}
+
+		{	// Preset Point UI Setting
+			UCanvasPanelSlot* CanvasSlot;
+			for (int32 i = 0; i < PresetActors.Num(); ++i)
+			{
+				CanvasSlot = Cast<UCanvasPanelSlot>(PresetWidgets[i]->Slot);
+				CanvasSlot->SetPosition(WorldPos2MinimapCoord(PresetActors[i]->GetActorLocation()));
+			}
 		}
 
 		{	// Way Line UI Setting

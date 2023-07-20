@@ -79,7 +79,7 @@ ADSDronePawn::ADSDronePawn()
 
 	CaptureComponent = CreateDefaultSubobject<UDSCaptureComponent>(TEXT("CaptureComponent"));
 	CaptureComponent->SetupAttachment(RootComponent);
-	CaptureComponent->SetRelativeLocation(FVector(0.f, 0.f, -15.f));
+	CaptureComponent->SetRelativeLocation(FVector(0.f, 0.f, 0.f));
 
 	DroneSpeedArray.Add(300);
 	DroneSpeedArray.Add(600);
@@ -247,7 +247,7 @@ void ADSDronePawn::ApplyLoadData()
 
 	if (DroneData != nullptr)
 	{
-		if (DroneData->CurrentTarget != nullptr && DroneData->CurrentTarget != CaptureComponent->GetTarget())
+		if (DroneData->CurrentTarget != nullptr)
 		{
 			CenterPosition = DroneData->CurrentTarget->GetActorLocation() + FVector(0, 0, DroneData->CurrentHeight * 100.0f);
 
@@ -308,7 +308,7 @@ void ADSDronePawn::MoveDroneWithWaypoint(float DeltaTime)
 
 void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
 {
-	if (bDroneOperation && DroneMode != EDroneMode::Manual)
+	if (DroneMode == EDroneMode::TargetView || (bDroneOperation && DroneMode != EDroneMode::Manual))
 	{
 		return;
 	}
@@ -375,12 +375,24 @@ FString ADSDronePawn::GetCaptureInfo()
 
 void ADSDronePawn::ChangeDroneMode(EDroneMode InDroneMode)
 {
+	if (DroneMode == EDroneMode::TargetView && InDroneMode != EDroneMode::TargetView)
+	{
+		SetActorLocation(PrevLocation);
+		CameraBoom->TargetArmLength = PrevBoomLength;
+		MeshComponent->SetVisibility(true);
+	}
+	else if (DroneMode != EDroneMode::TargetView && InDroneMode == EDroneMode::TargetView)
+	{
+		PrevLocation = GetActorLocation();
+		PrevBoomLength = CameraBoom->TargetArmLength;
+		MeshComponent->SetVisibility(false);
+	}
+
 	DroneMode = InDroneMode;
-	bDroneOperation = DroneMode != EDroneMode::Setting;
+	bDroneOperation = DroneMode != EDroneMode::Setting && DroneMode != EDroneMode::TargetView;
 	//MeshComponent->SetVisibility(bBoolean);
 	CameraBoom->bDoCollisionTest = bDroneOperation;
-
-	if (DroneMode == EDroneMode::Waypoint)
+if (DroneMode == EDroneMode::Waypoint)
 	{
 		UDSSaveGame* DroneData = LoadGame();
 		if (WpActor->GetWaypoint().Points.Num() > 0)
@@ -389,6 +401,7 @@ void ADSDronePawn::ChangeDroneMode(EDroneMode InDroneMode)
 			CurrentPointIndex = 0;
 		}
 	}
+	
 }
 
 void ADSDronePawn::GotoCurrentTarget()
@@ -396,6 +409,6 @@ void ADSDronePawn::GotoCurrentTarget()
 	UDSSaveGame* DroneData = LoadGame();
 	if (DroneData->CurrentTarget!=nullptr)
 	{
-		SetActorLocation(DroneData->CurrentTarget->GetActorLocation() + FVector(0, 0, DroneData->CurrentHeight * 100.0f));
+		SetActorLocation(DroneData->CurrentTarget->GetActorLocation());
 	}
 }

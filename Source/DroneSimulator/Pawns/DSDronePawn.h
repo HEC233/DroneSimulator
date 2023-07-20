@@ -13,7 +13,8 @@ enum class EDroneMode : uint8
 	Setting,
 	AutoPilot,
 	Manual,
-	Waypoint
+	Waypoint,
+	TargetView,
 };
 
 UCLASS()
@@ -125,6 +126,8 @@ private:
 	float TimeRecord;
 	float CaptureSpan;
 	float CaptureTimeDuration;
+	FVector PrevLocation;
+	float PrevBoomLength;
 
 	// Waypoint
 	int32 CurrentPointIndex = 0;

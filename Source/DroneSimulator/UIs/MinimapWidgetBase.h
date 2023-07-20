@@ -31,12 +31,20 @@ public:
 	virtual float GetZoomRate_Implementation();
 
 protected:
-	UPROPERTY(EditAnywhere, Category = "Widget")
+	UPROPERTY(EditAnywhere, Category = Widget)
 	TSubclassOf<UUserWidget> WaypointWidget;
-	UPROPERTY(EditAnywhere, Category = "Widget")
+	UPROPERTY(EditAnywhere, Category = Widget)
+	TSubclassOf<UUserWidget> PresetWidget;
+	UPROPERTY(EditAnywhere, Category = Widget)
 	TSubclassOf<UUserWidget> WayLineWidget;
-	UPROPERTY(EditAnywhere, Category = "Widget")
+	UPROPERTY(EditAnywhere, Category = Widget)
 	TObjectPtr<UPanelWidget> MinimapPanel;
+
+protected:
+	UPROPERTY(EditAnywhere, Category = Actor)
+	TSubclassOf<AActor> PresetActor; 
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> PresetActors;
 
 private:
 	bool SetWaypointActor();
@@ -51,6 +59,8 @@ private:
 	TObjectPtr<class USpringArmComponent> PlayerSpringArm;
 	UPROPERTY()
 	TArray<TObjectPtr<UUserWidget>> WaypointWidgets;
+	UPROPERTY()
+	TArray<TObjectPtr<UUserWidget>> PresetWidgets;
 	UPROPERTY()
 	TArray<TObjectPtr<UUserWidget>> WayLineWidgets;
 
