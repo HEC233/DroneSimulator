@@ -134,3 +134,22 @@ void ADSPlayerController::SetPauseUI(bool bPause)
 		bPaused = false;
 	}
 }
+
+TArray<const AActor*> ADSPlayerController::GetTargetsInVolume(const FConvexVolume& ConvexVolume)
+{
+	TArray<const AActor*> Result;
+
+	for (const AActor* Target : TargetArray)
+	{
+		FVector Origin;
+		FVector Extent;
+		Target->GetActorBounds(false, Origin, Extent, true);
+
+		if (ConvexVolume.IntersectBox(Origin, Extent))
+		{
+			Result.Add(Target);
+		}
+	}
+
+	return Result;
+}

@@ -138,7 +138,7 @@ void ADSDronePawn::Tick(float DeltaTime)
 
 	if (bIsCapture)
 	{
-		if (CurrentCaptureCount < MaxCaptureCount)
+		if (DroneMode == EDroneMode::Waypoint || CurrentCaptureCount < MaxCaptureCount)
 		{
 			TimeRecord += DeltaTime;
 			CaptureTimeDuration += DeltaTime;
@@ -158,8 +158,16 @@ void ADSDronePawn::Tick(float DeltaTime)
 
 			if (GEngine)
 			{
-				GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::White, FString::Printf(TEXT("InGame Capture Time : %f, Current Capture %d / %d")
-					, CaptureTimeDuration, CurrentCaptureCount, MaxCaptureCount));
+				if (DroneMode == EDroneMode::Waypoint)
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::White, FString::Printf(TEXT("InGame Capture Time : %f, Current Capture %d")
+						, CaptureTimeDuration, CurrentCaptureCount));
+				}
+				else
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::White, FString::Printf(TEXT("InGame Capture Time : %f, Current Capture %d / %d")
+						, CaptureTimeDuration, CurrentCaptureCount, MaxCaptureCount));
+				}
 			}
 		}
 	}
@@ -370,7 +378,14 @@ void ADSDronePawn::ChangeCaptureState(bool bBoolean)
 
 FString ADSDronePawn::GetCaptureInfo()
 {
-	return FString::Printf(TEXT("캡쳐 진행시간 : %.2f\n현재 캡쳐 수 %d / %d"), CaptureTimeDuration, CurrentCaptureCount, MaxCaptureCount);
+	if (DroneMode == EDroneMode::Waypoint)
+	{
+		return FString::Printf(TEXT("캡쳐 진행시간 : %.2f\n현재 캡쳐 수 %d"), CaptureTimeDuration, CurrentCaptureCount);
+	}
+	else
+	{
+		return FString::Printf(TEXT("캡쳐 진행시간 : %.2f\n현재 캡쳐 수 %d / %d"), CaptureTimeDuration, CurrentCaptureCount, MaxCaptureCount);
+	}
 }
 
 void ADSDronePawn::ChangeDroneMode(EDroneMode InDroneMode)
@@ -402,6 +417,11 @@ if (DroneMode == EDroneMode::Waypoint)
 		}
 	}
 	
+}
+
+EDroneMode ADSDronePawn::GetDroneMode()
+{
+	return DroneMode;
 }
 
 void ADSDronePawn::GotoCurrentTarget()

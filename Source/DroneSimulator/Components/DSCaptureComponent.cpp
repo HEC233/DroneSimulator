@@ -5,6 +5,7 @@
 #include "Components/SceneCaptureComponent2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/Texture2D.h"
+#include "DroneSimulator/Controller/DSPlayerController.h"
 #include "ImageUtils.h"
 
 UDSCaptureComponent::UDSCaptureComponent()
@@ -46,6 +47,21 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	LookTarget();
 	const FDateTime CurrentTime = FDateTime::Now();
 	const FString TimeString = CurrentTime.ToString(TEXT("%Y.%m.%d-%H.%M.%S"));
+
+	TArray<const AActor*> Targets;
+
+	ADSPlayerController* PC = Cast<ADSPlayerController>(GetWorld()->GetFirstPlayerController());
+	/*if (PC)
+	{
+		FConvexVolume Volume;
+		GetViewFrustumBounds(Volume, GetViewProjection(), true);
+		Targets.Append(PC->GetTargetsInVolume(Volume));
+	}
+	else*/
+	{
+		Targets.Add(CaptureTargetActor);
+	}
+
 	FString TargetName = CaptureTargetActor->GetActorNameOrLabel();
 	FString TargetAbsoulteName = TargetName;
 
@@ -54,18 +70,13 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	{
 		NameProp->GetValue_InContainer(CaptureTargetActor, &TargetName);
 	}
-	NameProp = CaptureTargetActor->GetClass()->FindPropertyByName(TEXT("TargetAbsoluteName"));
-	if (NameProp)
-	{
-		NameProp->GetValue_InContainer(CaptureTargetActor, &TargetAbsoulteName);
-	}
 
 	FString ImageFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%06d - %s Image - %s.jpg"), CaptureIndex, *TargetName, *TimeString));
 	FString TextFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%06d - %s Image - %s.txt"), CaptureIndex, *TargetName, *TimeString));
 	FPaths::MakeStandardFilename(ImageFilePath);
 	FPaths::MakeStandardFilename(TextFilePath);
 
-	//SceneCapture->CaptureScene();
+
 	FArchive* RawFileWriterAr = IFileManager::Get().CreateFileWriter(*ImageFilePath);
 	if (RawFileWriterAr == nullptr)
 	{
@@ -74,36 +85,44 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	}
 	bool ImageSavedOK = ExportRenderTargetJPG(TextureTarget, *RawFileWriterAr);
 	RawFileWriterAr->Close();
+	FString LabelingText;
 
-	FVector2D Min, Max;
-	CalculateNDCMinMax(Min, Max);
+	for (const AActor* Target : Targets)
+	{
+		FVector2D Min, Max;
+		CalculateNDCMinMax(Target, Min, Max);
 
-	Min = (Min / 2) + FVector2D(0.5f, 0.5f);
-	Max = (Max / 2) + FVector2D(0.5f, 0.5f);
+		Min = FVector2D(FMath::Clamp(Min.X, -1, 1), FMath::Clamp(Min.Y, -1, 1));
+		Max = FVector2D(FMath::Clamp(Max.X, -1, 1), FMath::Clamp(Max.Y, -1, 1));
 
-	Min.X *= TextureTarget->SizeX;
-	Max.X *= TextureTarget->SizeX;
-	Min.Y *= TextureTarget->SizeY;
-	Max.Y *= TextureTarget->SizeY;
-	Min.Y = TextureTarget->SizeY - Min.Y;
-	Max.Y = TextureTarget->SizeY - Max.Y;
+		Min = (Min / 2) + FVector2D(0.5f, 0.5f);
+		Max = (Max / 2) + FVector2D(0.5f, 0.5f);
 
-	float SwapTemp = Min.Y;
-	Min.Y = Max.Y;
-	Max.Y = SwapTemp;
+		Min.X *= TextureTarget->SizeX;
+		Max.X *= TextureTarget->SizeX;
+		Min.Y *= TextureTarget->SizeY;
+		Max.Y *= TextureTarget->SizeY;
+		Min.Y = TextureTarget->SizeY - Min.Y;
+		Max.Y = TextureTarget->SizeY - Max.Y;
 
-	/*FVector2f Center = (Min + Max) / 2.0f;
-	Min = Center + (Min - Center) * BoxSizeMultiplier;
-	Max = Center + (Max - Center) * BoxSizeMultiplier;*/
+		float SwapTemp = Min.Y;
+		Min.Y = Max.Y;
+		Max.Y = SwapTemp;
 
-	int32 MinX = FMath::FloorToInt(Min.X);
-	int32 MinY = FMath::FloorToInt(Min.Y);
-	int32 MaxX = FMath::CeilToInt(Max.X);
-	int32 MaxY = FMath::CeilToInt(Max.Y);
+		int32 MinX = FMath::FloorToInt(Min.X);
+		int32 MinY = FMath::FloorToInt(Min.Y);
+		int32 MaxX = FMath::CeilToInt(Max.X);
+		int32 MaxY = FMath::CeilToInt(Max.Y);
 
-	UE_LOG(LogTemp, Log, TEXT("Min: %s, Max: %s"), *Min.ToString(), *Max.ToString());
-	FString LabelingText = FString::Printf(TEXT("%s,%d,%d,%d,%d"), *TargetAbsoulteName, MinX, MinY, MaxX - MinX, MaxY - MinY);
-	FFileHelper::SaveStringToFile(*LabelingText, *TextFilePath);
+		NameProp = Target->GetClass()->FindPropertyByName(TEXT("TargetAbsoluteName"));
+		if (NameProp)
+		{
+			NameProp->GetValue_InContainer(Target, &TargetAbsoulteName);
+		}
+
+		LabelingText += FString::Printf(TEXT("%s,%d,%d,%d,%d\n"), *TargetAbsoulteName, MinX, MinY, MaxX - MinX, MaxY - MinY);
+	}
+	FFileHelper::SaveStringToFile(*LabelingText, *TextFilePath, FFileHelper::EEncodingOptions::ForceUTF8);
 
 	if (ImageSavedOK)
 	{
@@ -153,9 +172,26 @@ void UDSCaptureComponent::SetCaptureTick(bool bValue)
 	bCaptureEveryFrame = bValue;
 }
 
-void UDSCaptureComponent::CalculateNDCMinMax(FVector2D& OutMin, FVector2D& OutMax)
+FMatrix UDSCaptureComponent::GetViewProjection()
 {
-	if (CaptureTargetActor == nullptr)
+	FMatrix ViewProjectionMatrix = FMatrix::Identity;
+	FMinimalViewInfo ViewInfo;
+	GetCameraView(0.0f, ViewInfo);
+	ViewInfo.AspectRatio = TextureTarget->SizeX / TextureTarget->SizeY;
+	const FMatrix ViewMatrix = FTranslationMatrix(-GetComponentLocation()) * FInverseRotationMatrix(GetComponentRotation()) * FMatrix(
+		FPlane(0, 0, 1, 0),
+		FPlane(1, 0, 0, 0),
+		FPlane(0, 1, 0, 0),
+		FPlane(0, 0, 0, 1));
+	const FMatrix ProjectionMatrix = ViewInfo.CalculateProjectionMatrix();
+	ViewProjectionMatrix = ViewMatrix * ProjectionMatrix;
+
+	return ViewProjectionMatrix;
+}
+
+void UDSCaptureComponent::CalculateNDCMinMax(const AActor* Target, FVector2D& OutMin, FVector2D& OutMax)
+{
+	if (Target == nullptr)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Target is not exist!"));
 		return;
@@ -167,8 +203,8 @@ void UDSCaptureComponent::CalculateNDCMinMax(FVector2D& OutMin, FVector2D& OutMa
 	TArray<UStaticMeshComponent*> CapturingMeshComponents;
 	TArray<AActor*> AttachedActors;
 
-	CaptureTargetActor->GetAttachedActors(AttachedActors, true, true);
-	AttachedActors.Add(const_cast<AActor*>(CaptureTargetActor.Get()));
+	Target->GetAttachedActors(AttachedActors, true, true);
+	AttachedActors.Add(const_cast<AActor*>(Target));
 
 	for (AActor* Actor : AttachedActors)
 	{
@@ -181,37 +217,9 @@ void UDSCaptureComponent::CalculateNDCMinMax(FVector2D& OutMin, FVector2D& OutMa
 				CapturingMeshComponents.Emplace(Component);
 			}
 		}
-		/*TArray<UStaticMeshComponent*> Components;
-		Actor->GetComponents<UStaticMeshComponent>(Components);
-		for (UStaticMeshComponent* Component : Components)
-		{
-			if (!Component->ComponentHasTag(TargetFilteringName))
-			{
-				StaticMeshComponents.Emplace(Component);
-			}
-		}*/
 	}
 
-	//APlayerController* PlayerController = CastChecked<APlayerController>(GetController());
-	//ULocalPlayer* const LocalPlayer = PlayerController->GetLocalPlayer();
-
-	//FSceneViewProjectionData ProjectionData;
-	//if (LocalPlayer->GetProjectionData(LocalPlayer->ViewportClient->Viewport, /*out*/ ProjectionData))
-	//{
-	//	ViewProjectionMatrix = ProjectionData.ComputeViewProjectionMatrix();
-	//}
-
-	FMatrix ViewProjectionMatrix = FMatrix::Identity;
-	FMinimalViewInfo ViewInfo;
-	GetCameraView(0.0f, ViewInfo);
-	ViewInfo.AspectRatio = TextureTarget->SizeX / TextureTarget->SizeY;
-	const FMatrix ViewMatrix = FTranslationMatrix(-GetComponentLocation()) * FInverseRotationMatrix(GetComponentRotation()) * FMatrix(
-		FPlane(0, 0, 1, 0),
-		FPlane(1, 0, 0, 0),
-		FPlane(0, 1, 0, 0),
-		FPlane(0, 0, 0, 1));
-	const FMatrix ProjectionMatrix = ViewInfo.CalculateProjectionMatrix();
-	ViewProjectionMatrix = ViewMatrix * ProjectionMatrix;
+	const FMatrix ViewProjectionMatrix = GetViewProjection();
 
 	for (UStaticMeshComponent* MeshComp : CapturingMeshComponents)
 	{

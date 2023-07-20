@@ -45,8 +45,11 @@ public:
 	void SetZoomRate(float InZoomRate);
 	void SetCaptureTick(bool bValue);
 
+protected:
+	FMatrix GetViewProjection();
+
 private:
-	void CalculateNDCMinMax(FVector2D& OutMin, FVector2D& OutMax);
+	void CalculateNDCMinMax(const AActor* Target, FVector2D& OutMin, FVector2D& OutMax);
 	bool ExportRenderTargetJPG(class UTextureRenderTarget2D* TexRT, FArchive& Ar);
 	void LookTarget();
 

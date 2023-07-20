@@ -38,6 +38,8 @@ public:
 
 	void SetPauseUI(bool bPause);
 
+	TArray<const AActor*> GetTargetsInVolume(const FConvexVolume& ConvexVolume);
+
 protected:
 	UPROPERTY(BlueprintReadOnly)
 	UIStatus CurrentUI;

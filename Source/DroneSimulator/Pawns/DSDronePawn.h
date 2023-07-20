@@ -39,13 +39,15 @@ public:
 
 	// About Pawn Camera
 public:
-	UFUNCTION(BlueprintCallable, Category = "Capture")
+	UFUNCTION(BlueprintCallable, Category = Capture)
 	void ChangeCaptureState(bool bBoolean);
-	UFUNCTION(BlueprintCallable, Category = "Capture")
+	UFUNCTION(BlueprintCallable, Category = Capture)
 	FString GetCaptureInfo();
-	UFUNCTION(BlueprintCallable, Category = "Capture")
+	UFUNCTION(BlueprintCallable, Category = DroneMode)
 	void ChangeDroneMode(EDroneMode InDroneMode);
-	UFUNCTION(BlueprintCallable, Category = "Capture")
+	UFUNCTION(BlueprintCallable, Category = DroneMode)
+	EDroneMode GetDroneMode();
+	UFUNCTION(BlueprintCallable, Category = Capture)
 	void GotoCurrentTarget();
 
 protected:
