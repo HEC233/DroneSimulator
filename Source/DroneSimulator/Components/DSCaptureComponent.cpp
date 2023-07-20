@@ -14,7 +14,7 @@ UDSCaptureComponent::UDSCaptureComponent()
 	static ConstructorHelpers::FObjectFinder<UTextureRenderTarget2D> RenderTargetRef(TEXT("/Script/Engine.TextureRenderTarget2D'/Game/DroneSimulator/NewTextureRenderTarget2D.NewTextureRenderTarget2D'"));
 	if (RenderTargetRef.Object)
 	{
-		RenderTarget = RenderTargetRef.Object;
+		MyRenderTarget = RenderTargetRef.Object;
 	}
 
 	TargetFilteringName = FName(TEXT("NoTarget"));
@@ -25,10 +25,7 @@ void UDSCaptureComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SceneCapture = NewObject<USceneCaptureComponent2D>();
-	SceneCapture->TextureTarget = RenderTarget;
-	SceneCapture->bCaptureEveryFrame = true;
-	SceneCapture->RegisterComponent();
+	TextureTarget = MyRenderTarget;
 }
 
 
@@ -41,7 +38,7 @@ void UDSCaptureComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 
 void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 {
-	if (RenderTarget == nullptr || CaptureTargetActor == nullptr)
+	if (TextureTarget == nullptr || CaptureTargetActor == nullptr)
 	{
 		return;
 	}
@@ -69,7 +66,7 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 		UE_LOG(LogTemp, Log, TEXT("Problem Occured"));
 		return;
 	}
-	bool ImageSavedOK = ExportRenderTargetJPG(RenderTarget, *RawFileWriterAr);
+	bool ImageSavedOK = ExportRenderTargetJPG(TextureTarget, *RawFileWriterAr);
 	RawFileWriterAr->Close();
 
 	FVector2D Min, Max;
@@ -78,12 +75,12 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	Min = (Min / 2) + FVector2D(0.5f, 0.5f);
 	Max = (Max / 2) + FVector2D(0.5f, 0.5f);
 
-	Min.X *= RenderTarget->SizeX;
-	Max.X *= RenderTarget->SizeX;
-	Min.Y *= RenderTarget->SizeY;
-	Max.Y *= RenderTarget->SizeY;
-	Min.Y = RenderTarget->SizeY - Min.Y;
-	Max.Y = RenderTarget->SizeY - Max.Y;
+	Min.X *= TextureTarget->SizeX;
+	Max.X *= TextureTarget->SizeX;
+	Min.Y *= TextureTarget->SizeY;
+	Max.Y *= TextureTarget->SizeY;
+	Min.Y = TextureTarget->SizeY - Min.Y;
+	Max.Y = TextureTarget->SizeY - Max.Y;
 
 	float SwapTemp = Min.Y;
 	Min.Y = Max.Y;
@@ -138,24 +135,6 @@ const FVector& UDSCaptureComponent::GetLookAtPos()
 	return LookAtPos;
 }
 
-void UDSCaptureComponent::SetCameraPosition(FVector RelativePosition)
-{
-	if (SceneCapture == nullptr)
-	{
-		return;
-	}
-	SceneCapture->SetRelativeLocation(RelativePosition);
-}
-
-void UDSCaptureComponent::AttachCamera(USceneComponent* Parent)
-{
-	if (SceneCapture == nullptr)
-	{
-		return;
-	}
-	SceneCapture->SetupAttachment(Parent);
-}
-
 void UDSCaptureComponent::SetCameraFOV(float FOV)
 {
 	CurrentFOV = FOV;
@@ -170,11 +149,7 @@ void UDSCaptureComponent::SetZoomRate(float InZoomRate)
 
 void UDSCaptureComponent::SetCaptureTick(bool bValue)
 {
-	if (SceneCapture == nullptr)
-	{
-		return;
-	}
-	SceneCapture->bCaptureEveryFrame = bValue;
+	bCaptureEveryFrame = bValue;
 }
 
 void UDSCaptureComponent::CalculateNDCMinMax(FVector2D& OutMin, FVector2D& OutMax)
@@ -227,9 +202,9 @@ void UDSCaptureComponent::CalculateNDCMinMax(FVector2D& OutMin, FVector2D& OutMa
 
 	FMatrix ViewProjectionMatrix = FMatrix::Identity;
 	FMinimalViewInfo ViewInfo;
-	SceneCapture->GetCameraView(0.0f, ViewInfo);
-	ViewInfo.AspectRatio = RenderTarget->SizeX / RenderTarget->SizeY;
-	const FMatrix ViewMatrix = FTranslationMatrix(-SceneCapture->GetComponentLocation()) * FInverseRotationMatrix(SceneCapture->GetComponentRotation()) * FMatrix(
+	GetCameraView(0.0f, ViewInfo);
+	ViewInfo.AspectRatio = TextureTarget->SizeX / TextureTarget->SizeY;
+	const FMatrix ViewMatrix = FTranslationMatrix(-GetComponentLocation()) * FInverseRotationMatrix(GetComponentRotation()) * FMatrix(
 		FPlane(0, 0, 1, 0),
 		FPlane(1, 0, 0, 0),
 		FPlane(0, 1, 0, 0),
@@ -239,17 +214,17 @@ void UDSCaptureComponent::CalculateNDCMinMax(FVector2D& OutMin, FVector2D& OutMa
 
 	for (UStaticMeshComponent* MeshComp : CapturingMeshComponents)
 	{
-		FBoxSphereBounds Bounds = MeshComp->GetStaticMesh()->GetBounds();
+		FBoxSphereBounds Bds = MeshComp->GetStaticMesh()->GetBounds();
 
 		TArray<FVector> Points;
-		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(1, 1, 1)));
-		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(1, 1, -1)));
-		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(1, -1, 1)));
-		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(1, -1, -1)));
-		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(-1, 1, 1)));
-		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(-1, 1, -1)));
-		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(-1, -1, 1)));
-		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bounds.Origin + Bounds.BoxExtent * FVector(-1, -1, -1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bds.Origin + Bds.BoxExtent * FVector(1, 1, 1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bds.Origin + Bds.BoxExtent * FVector(1, 1, -1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bds.Origin + Bds.BoxExtent * FVector(1, -1, 1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bds.Origin + Bds.BoxExtent * FVector(1, -1, -1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bds.Origin + Bds.BoxExtent * FVector(-1, 1, 1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bds.Origin + Bds.BoxExtent * FVector(-1, 1, -1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bds.Origin + Bds.BoxExtent * FVector(-1, -1, 1)));
+		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bds.Origin + Bds.BoxExtent * FVector(-1, -1, -1)));
 
 		for (FVector& Point : Points)
 		{
@@ -293,7 +268,11 @@ bool UDSCaptureComponent::ExportRenderTargetJPG(UTextureRenderTarget2D* TexRT, F
 
 void UDSCaptureComponent::LookTarget()
 {
-	FVector Direction = LookAtPos - SceneCapture->GetComponentLocation();
+	FVector Direction = LookAtPos - GetComponentLocation();
+	if (Direction.IsNearlyZero())
+	{
+		Direction = FVector::ForwardVector;
+	}
 	Direction.Normalize();
 
 	// This code does same thing below... but I didn't know that and did it myself...
@@ -314,11 +293,11 @@ void UDSCaptureComponent::LookTarget()
 	//FRotator LookAtRotator = FLookFromMatrix(this->GetActorLocation(), Direction, FVector::UpVector).Rotator();
 	//FollowCamera->SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
 	//FollowCamera->SetWorldRotation(LookRotator);
-	SceneCapture->SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
+	SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
 }
 
 void UDSCaptureComponent::SetFinalFOV()
 {
-	SceneCapture->FOVAngle = FMath::RadiansToDegrees(FMath::Atan(FMath::Tan(FMath::DegreesToRadians(CurrentFOV) / ZoomRate)));
+	FOVAngle = FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan(FMath::Tan(FMath::DegreesToRadians(CurrentFOV) / ZoomRate))), 0.001f, 360.0f);
 }
 

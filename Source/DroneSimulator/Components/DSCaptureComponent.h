@@ -3,11 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
+#include "Components/SceneCaptureComponent2D.h"
 #include "DSCaptureComponent.generated.h"
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class DRONESIMULATOR_API UDSCaptureComponent : public UActorComponent
+class DRONESIMULATOR_API UDSCaptureComponent : public USceneCaptureComponent2D
 {
 	GENERATED_BODY()
 
@@ -25,11 +25,8 @@ public:
 
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Capture, Meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<class USceneCaptureComponent2D> SceneCapture;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capture, Meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<class UTextureRenderTarget2D> RenderTarget;
+	TObjectPtr<class UTextureRenderTarget2D> MyRenderTarget;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Capture, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<const AActor> CaptureTargetActor;
@@ -43,8 +40,6 @@ public:
 	const TObjectPtr<const AActor> GetTarget();
 	void SetLookAtPos(const FVector& Pos);
 	const FVector& GetLookAtPos();
-	void SetCameraPosition(FVector RelativePosition);
-	void AttachCamera(USceneComponent* Parent);
 
 	void SetCameraFOV(float FOV);
 	void SetZoomRate(float InZoomRate);
@@ -60,6 +55,6 @@ private:
 private:
 	FName TargetFilteringName;
 
-	float CurrentFOV;
+	float CurrentFOV = 60.0f;
 	float ZoomRate = 1.0f;
 };
