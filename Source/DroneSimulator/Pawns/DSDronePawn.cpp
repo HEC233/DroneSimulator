@@ -257,7 +257,6 @@ void ADSDronePawn::ApplyLoadData()
 		AngleSpeed = DroneData->CurrentMoveSpeed / 60.0f;
 
 		CaptureSpeedPerSecond = DroneData->CurrentCaptureSpeed;
-		CaptureComponent->SetCameraFOV(DroneData->CurrentFOV);
 		if (DroneMode == EDroneMode::Waypoint)
 		{
 			CaptureComponent->SetZoomRate(WpActor->GetWaypoint().ZoomRate);
@@ -283,18 +282,21 @@ void ADSDronePawn::MoveDrone(float DeltaTime)
 
 void ADSDronePawn::MoveDroneWithWaypoint(float DeltaTime)
 {
-	if (WpActor->GetWaypoint().Points.IsEmpty()) return;
+	const FWaypoint& Wp = WpActor->GetWaypoint();
+	if (Wp.Points.IsEmpty()) return;
+
+	CaptureComponent->SetLookAtPos(Wp.Points[CurrentPointIndex].Location);
 	
-	const FVector Direction = WpActor->GetWaypoint().Points[CurrentPointIndex].Location - GetActorLocation();
+	const FVector Direction = Wp.Points[CurrentPointIndex].Location - GetActorLocation();
 	const float TargetLenght = Direction.Size();
 	
 	FVector NewPosition = GetActorLocation() + Direction.GetSafeNormal() * DroneSpeed * DeltaTime;
 	if (TargetLenght < DroneSpeed * DeltaTime)
 	{
-		NewPosition = WpActor->GetWaypoint().Points[CurrentPointIndex].Location;
+		NewPosition = Wp.Points[CurrentPointIndex].Location;
 
 		++CurrentPointIndex;
-		if (CurrentPointIndex >= WpActor->GetWaypoint().Points.Num())
+		if (CurrentPointIndex >= Wp.Points.Num())
 		{
 			CurrentPointIndex = 0;
 		}

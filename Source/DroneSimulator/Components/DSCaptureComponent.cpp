@@ -116,14 +116,25 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	}
 }
 
-void UDSCaptureComponent::SetTarget(AActor* TargetActor)
+void UDSCaptureComponent::SetTarget(const AActor* TargetActor)
 {
-	CaptureTargetActor = TargetActor;
+	CaptureTargetActor = (TargetActor);
+	SetLookAtPos(CaptureTargetActor->GetActorLocation());
 }
 
-const TObjectPtr<AActor> UDSCaptureComponent::GetTarget()
+const TObjectPtr<const AActor> UDSCaptureComponent::GetTarget()
 {
 	return CaptureTargetActor;
+}
+
+void UDSCaptureComponent::SetLookAtPos(const FVector& Pos)
+{
+	LookAtPos = Pos;
+}
+
+const FVector& UDSCaptureComponent::GetLookAtPos()
+{
+	return LookAtPos;
 }
 
 void UDSCaptureComponent::SetCameraPosition(FVector RelativePosition)
@@ -168,7 +179,7 @@ void UDSCaptureComponent::CalculateNDCMinMax(FVector2D& OutMin, FVector2D& OutMa
 	TArray<AActor*> AttachedActors;
 
 	CaptureTargetActor->GetAttachedActors(AttachedActors, true, true);
-	AttachedActors.Add(CaptureTargetActor);
+	AttachedActors.Add(const_cast<AActor*>(CaptureTargetActor.Get()));
 
 	for (AActor* Actor : AttachedActors)
 	{
@@ -269,12 +280,7 @@ bool UDSCaptureComponent::ExportRenderTargetJPG(UTextureRenderTarget2D* TexRT, F
 
 void UDSCaptureComponent::LookTarget()
 {
-	if (CaptureTargetActor == nullptr)
-	{
-		return;
-	}
-
-	FVector Direction = CaptureTargetActor->GetActorLocation() - SceneCapture->GetComponentLocation();
+	FVector Direction = LookAtPos - SceneCapture->GetComponentLocation();
 	Direction.Normalize();
 
 	// This code does same thing below... but I didn't know that and did it myself...

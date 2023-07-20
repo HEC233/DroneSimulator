@@ -32,12 +32,17 @@ protected:
 	TObjectPtr<class UTextureRenderTarget2D> RenderTarget;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Capture, Meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<AActor> CaptureTargetActor;
+	TObjectPtr<const AActor> CaptureTargetActor;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Capture, Meta = (AllowPrivateAccess = "true"))
+	FVector LookAtPos;
 
 public:
 	void TakeScreenShot(int32 CaptureIndex = 0);
-	void SetTarget(AActor* TargetActor);
-	const TObjectPtr<AActor> GetTarget();
+	void SetTarget(const AActor* TargetActor);
+	const TObjectPtr<const AActor> GetTarget();
+	void SetLookAtPos(const FVector& Pos);
+	const FVector& GetLookAtPos();
 	void SetCameraPosition(FVector RelativePosition);
 	void AttachCamera(USceneComponent* Parent);
 
