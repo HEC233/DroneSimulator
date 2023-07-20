@@ -63,10 +63,9 @@ FVector2D UMinimapWidgetBase::WorldPos2MinimapCoord(const FVector& WorldPos)
 	return RotatedCoord;
 }
 
-void UMinimapWidgetBase::SetPlayerActor(AActor* InPlayerActor)
+void UMinimapWidgetBase::SetPlayerActor(APawn* InPlayerActor)
 {
-	PlayerActor = InPlayerActor;
-	PlayerSpringArm = Cast<USpringArmComponent>(PlayerActor->GetComponentByClass(USpringArmComponent::StaticClass()));
+	PlayerPawn = InPlayerActor;
 }
 
 void UMinimapWidgetBase::UpdateMinimap()
@@ -79,16 +78,13 @@ void UMinimapWidgetBase::UpdateMinimap()
 			return;
 		}
 	}
-	if (PlayerSpringArm)
+	if (PlayerPawn)
 	{
-		MinimapRotate = -PlayerSpringArm->GetComponentRotation().Yaw;
-	}
-	if (PlayerActor)
-	{
-		float XPos = PlayerActor->GetActorLocation().X - MinimapCaptureLocation.X;
-		float YPos = PlayerActor->GetActorLocation().Y - MinimapCaptureLocation.Y;
+		float XPos = PlayerPawn->GetActorLocation().X - MinimapCaptureLocation.X;
+		float YPos = PlayerPawn->GetActorLocation().Y - MinimapCaptureLocation.Y;
 
 		MinimapCoord = FVector2d(YPos, -XPos) / MinimapCaptureScale * 2048;
+		MinimapRotate = -PlayerPawn->GetController()->GetControlRotation().Yaw;
 	}
 	if (MinimapPanel)
 	{

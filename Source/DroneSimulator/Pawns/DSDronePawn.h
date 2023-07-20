@@ -67,8 +67,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UCameraComponent> FollowCamera;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capture, Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Capture, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UDSCaptureComponent> CaptureComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Move, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UDSMovementComponent> MoveComponent;
 
 	// Input
 protected:
@@ -130,6 +133,7 @@ private:
 	float CaptureTimeDuration;
 	FVector PrevLocation;
 	float PrevBoomLength;
+	FRotator BoomRotate;
 
 	// Waypoint
 	int32 CurrentPointIndex = 0;
@@ -152,7 +156,7 @@ private:
 
 	// movement functions
 private:
-	void MoveDrone(float DeltaTime);
+	void MoveDroneCircle(float DeltaTime);
 	void MoveDroneWithWaypoint(float DeltaTime);
 	void MoveDroneWithInput(const FInputActionValue& Value);
 	void DroneAltitudeInput(const FInputActionValue& Value);

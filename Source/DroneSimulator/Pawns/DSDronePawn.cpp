@@ -14,6 +14,7 @@
 #include "DroneSimulator/Actors/WaypointActor.h"
 #include "DroneSimulator/Save/WaypointSaveGame.h"
 
+#include "DroneSimulator/Components/DSMovementComponent.h"
 #include "DroneSimulator/Components/DSCaptureComponent.h"
 
 // Sets default values
@@ -70,16 +71,18 @@ ADSDronePawn::ADSDronePawn()
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.f;
-	CameraBoom->SetWorldRotation(FRotator(-90.f, 0.f, 0.f));
-	CameraBoom->bUsePawnControlRotation = false;
+	//CameraBoom->SetWorldRotation(FRotator(-90.f, 0.f, 0.f));
+	CameraBoom->bUsePawnControlRotation = true;
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-	FollowCamera->bUsePawnControlRotation = false;
+	FollowCamera->bUsePawnControlRotation = true;
 
 	CaptureComponent = CreateDefaultSubobject<UDSCaptureComponent>(TEXT("CaptureComponent"));
 	CaptureComponent->SetupAttachment(RootComponent);
 	CaptureComponent->SetRelativeLocation(FVector(0.f, 0.f, 0.f));
+
+	MoveComponent = CreateDefaultSubobject<UDSMovementComponent>(TEXT("MoveComponent"));
 
 	DroneSpeedArray.Add(300);
 	DroneSpeedArray.Add(600);
@@ -129,7 +132,7 @@ void ADSDronePawn::Tick(float DeltaTime)
 	}
 	else if (DroneMode == EDroneMode::AutoPilot)
 	{
-		MoveDrone(DeltaTime);
+		MoveDroneCircle(DeltaTime);
 	}
 	else if (DroneMode == EDroneMode::Waypoint)
 	{
@@ -192,14 +195,10 @@ void ADSDronePawn::ProcessMouseInput(const FInputActionValue& Value)
 {
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
-	FTransform BoomTransform = CameraBoom->GetRelativeTransform();
-	FRotator BoomRotator = BoomTransform.Rotator();
+	BoomRotate.Yaw = BoomRotate.Yaw + LookAxisVector.X;
+	BoomRotate.Pitch = FMath::Clamp(BoomRotate.Pitch + LookAxisVector.Y, -80.0f, bDroneOperation ? 80.0f : -10.0f);
 
-	BoomRotator.Yaw = BoomRotator.Yaw + LookAxisVector.X;
-	BoomRotator.Pitch = FMath::Clamp(BoomRotator.Pitch + LookAxisVector.Y, -80.0f, bDroneOperation ? 80.0f : -10.0f);
-	BoomTransform.SetRotation(BoomRotator.Quaternion());
-
-	CameraBoom->SetRelativeTransform(BoomTransform);
+	GetController()->SetControlRotation(BoomRotate);
 }
 
 void ADSDronePawn::StartCapture()
@@ -277,7 +276,7 @@ void ADSDronePawn::ApplyLoadData()
 	}
 }
 
-void ADSDronePawn::MoveDrone(float DeltaTime)
+void ADSDronePawn::MoveDroneCircle(float DeltaTime)
 {
 	FVector NewPosition = CenterPosition;
 	CurrentRotationRate = FMath::Fmod((CurrentRotationRate + AngleSpeed * DeltaTime), 2.0f * PI);
@@ -286,7 +285,7 @@ void ADSDronePawn::MoveDrone(float DeltaTime)
 
 	NewPosition += FVector(SinValue, CosValue, 0) * RotationRadius;
 
-	SetActorLocation(NewPosition);
+	MoveComponent->MoveTo(NewPosition);
 }
 
 void ADSDronePawn::MoveDroneWithWaypoint(float DeltaTime)
@@ -311,7 +310,7 @@ void ADSDronePawn::MoveDroneWithWaypoint(float DeltaTime)
 		}
 	}
 	
-	SetActorLocation(NewPosition);
+	MoveComponent->MoveTo(NewPosition);
 }
 
 void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
@@ -323,7 +322,7 @@ void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
 
 	FVector2D Input = Value.Get<FVector2D>();
 
-	const FRotator Rotation = CameraBoom->GetComponentRotation();
+	const FRotator Rotation = GetControlRotation();
 	const FRotator YawRotation(0, Rotation.Yaw, 0);
 
 	const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
@@ -331,14 +330,14 @@ void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
 
 	const FVector Movement = ForwardDirection * Input.Y + RightDirection * Input.X;
 
-	SetActorLocation(GetActorLocation() + Movement * DroneSpeed * GetWorld()->DeltaTimeSeconds);
+	MoveComponent->MoveDirection(Movement * DroneSpeed);
 }
 
 void ADSDronePawn::DroneAltitudeInput(const FInputActionValue& Value)
 {
 	float Input = Value.Get<float>();
 
-	SetActorLocation(GetActorLocation() + FVector::UpVector * Input * DroneSpeed * GetWorld()->DeltaTimeSeconds);
+	MoveComponent->MoveDirection(FVector::UpVector * Input * DroneSpeed);
 }
 
 void ADSDronePawn::CameraZoomInput(const FInputActionValue& Value)

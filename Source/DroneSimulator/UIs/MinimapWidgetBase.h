@@ -21,7 +21,7 @@ public:
 	FORCEINLINE FVector2D WorldPos2MinimapCoord(const FVector& WorldPos);
 
 	UFUNCTION(BlueprintCallable, Category = Minimap)
-	void SetPlayerActor(AActor* InPlayerActor);
+	void SetPlayerActor(APawn* InPlayerActor);
 
 	UFUNCTION(BlueprintCallable, Category = Minimap)
 	void UpdateMinimap();
@@ -54,9 +54,7 @@ private:
 	float MinimapCaptureScale;
 
 	UPROPERTY()
-	TObjectPtr<AActor> PlayerActor;
-	UPROPERTY()
-	TObjectPtr<class USpringArmComponent> PlayerSpringArm;
+	TObjectPtr<APawn> PlayerPawn;
 	UPROPERTY()
 	TArray<TObjectPtr<UUserWidget>> WaypointWidgets;
 	UPROPERTY()
