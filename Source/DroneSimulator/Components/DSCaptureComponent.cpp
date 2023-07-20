@@ -17,10 +17,6 @@ UDSCaptureComponent::UDSCaptureComponent()
 		RenderTarget = RenderTargetRef.Object;
 	}
 
-	SceneCapture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCapture"));
-	SceneCapture->TextureTarget = RenderTarget;
-	SceneCapture->bCaptureEveryFrame = true;
-
 	TargetFilteringName = FName(TEXT("NoTarget"));
 }
 
@@ -28,6 +24,11 @@ UDSCaptureComponent::UDSCaptureComponent()
 void UDSCaptureComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	SceneCapture = NewObject<USceneCaptureComponent2D>();
+	SceneCapture->TextureTarget = RenderTarget;
+	SceneCapture->bCaptureEveryFrame = true;
+	SceneCapture->RegisterComponent();
 }
 
 
@@ -139,11 +140,19 @@ const FVector& UDSCaptureComponent::GetLookAtPos()
 
 void UDSCaptureComponent::SetCameraPosition(FVector RelativePosition)
 {
+	if (SceneCapture == nullptr)
+	{
+		return;
+	}
 	SceneCapture->SetRelativeLocation(RelativePosition);
 }
 
 void UDSCaptureComponent::AttachCamera(USceneComponent* Parent)
 {
+	if (SceneCapture == nullptr)
+	{
+		return;
+	}
 	SceneCapture->SetupAttachment(Parent);
 }
 
@@ -161,6 +170,10 @@ void UDSCaptureComponent::SetZoomRate(float InZoomRate)
 
 void UDSCaptureComponent::SetCaptureTick(bool bValue)
 {
+	if (SceneCapture == nullptr)
+	{
+		return;
+	}
 	SceneCapture->bCaptureEveryFrame = bValue;
 }
 

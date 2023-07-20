@@ -78,8 +78,6 @@ ADSDronePawn::ADSDronePawn()
 	FollowCamera->bUsePawnControlRotation = false;
 
 	CaptureComponent = CreateDefaultSubobject<UDSCaptureComponent>(TEXT("CaptureComponent"));
-	CaptureComponent->AttachCamera(RootComponent);
-	CaptureComponent->SetCameraPosition(FVector(0.f, 0.f, -15.f));
 
 	DroneSpeedArray.Add(300);
 	DroneSpeedArray.Add(600);
@@ -105,6 +103,8 @@ void ADSDronePawn::BeginPlay()
 
 	MakeWaypointActorValid();
 
+	CaptureComponent->AttachCamera(RootComponent);
+	CaptureComponent->SetCameraPosition(FVector(0.f, 0.f, -15.f));
 	CurrentCaptureCount = 0;
 	CurrentRotationRate = 0.0f;
 }
@@ -237,6 +237,7 @@ void ADSDronePawn::MakeWaypointActorValid()
 UDSSaveGame* ADSDronePawn::LoadGame()
 {
 	const auto SaveSlot = Cast<UDSSaveGame>(UGameplayStatics::LoadGameFromSlot("SaveSetting", 0));
+	check(SaveSlot != nullptr);
 	return SaveSlot;
 }
 
