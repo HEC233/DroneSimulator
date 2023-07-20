@@ -139,11 +139,11 @@ TArray<const AActor*> ADSPlayerController::GetTargetsInVolume(const FConvexVolum
 {
 	TArray<const AActor*> Result;
 
-	for (const AActor* Target : TargetArray)
+	for (const AActor* Target : AllTargets)
 	{
 		FVector Origin;
 		FVector Extent;
-		Target->GetActorBounds(false, Origin, Extent, true);
+		Target->GetActorBounds(true, Origin, Extent, false);
 
 		if (ConvexVolume.IntersectBox(Origin, Extent))
 		{

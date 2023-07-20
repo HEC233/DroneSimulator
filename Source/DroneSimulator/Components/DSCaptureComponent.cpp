@@ -51,13 +51,13 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	TArray<const AActor*> Targets;
 
 	ADSPlayerController* PC = Cast<ADSPlayerController>(GetWorld()->GetFirstPlayerController());
-	/*if (PC)
+	if (PC)
 	{
 		FConvexVolume Volume;
 		GetViewFrustumBounds(Volume, GetViewProjection(), true);
 		Targets.Append(PC->GetTargetsInVolume(Volume));
 	}
-	else*/
+	else
 	{
 		Targets.Add(CaptureTargetActor);
 	}
@@ -91,6 +91,11 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	{
 		FVector2D Min, Max;
 		CalculateNDCMinMax(Target, Min, Max);
+
+		if (Min.X >= 1.0f || Min.Y >= 1.0f || Max.X <= -1.0f || Max.Y <= -1.0f)
+		{
+			continue;
+		}
 
 		Min = FVector2D(FMath::Clamp(Min.X, -1, 1), FMath::Clamp(Min.Y, -1, 1));
 		Max = FVector2D(FMath::Clamp(Max.X, -1, 1), FMath::Clamp(Max.Y, -1, 1));

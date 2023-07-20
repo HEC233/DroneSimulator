@@ -71,6 +71,8 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite)
 	TArray<AActor*> TargetArray;
+	UPROPERTY(BlueprintReadWrite)
+	TArray<AActor*> AllTargets;
 	UPROPERTY(EditAnywhere, Category = "Logic")
 	TSubclassOf<AActor> TargetParent;
 
