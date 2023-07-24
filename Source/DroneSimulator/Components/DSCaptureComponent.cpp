@@ -58,7 +58,7 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	if (PC)
 	{
 		FConvexVolume Volume;
-		GetViewFrustumBounds(Volume, GetViewProjection(), true);
+		GetViewFrustumBounds(Volume, GetViewProjection(), false);
 		Targets.Append(PC->GetTargetsInVolume(Volume));
 	}
 	else
@@ -84,20 +84,32 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	FArchive* RawFileWriterAr = IFileManager::Get().CreateFileWriter(*ImageFilePath);
 	if (RawFileWriterAr == nullptr)
 	{
-		UE_LOG(LogTemp, Log, TEXT("Problem Occured"));
+		//UE_LOG(LogTemp, Log, TEXT("Problem Occured"));
 		return;
 	}
 	bool ImageSavedOK = ExportRenderTargetJPG(TextureTarget, *RawFileWriterAr);
 	RawFileWriterAr->Close();
 	FString LabelingText;
 
+	//UE_LOG(LogTemp, Log, TEXT("==="));
+	//UE_LOG(LogTemp, Log, TEXT("Filtering Start! Target Amount : %d"), Targets.Num());
+
 	for (const AActor* Target : Targets)
 	{
+		NameProp = Target->GetClass()->FindPropertyByName(TEXT("TargetName"));
+		if (NameProp)
+		{
+			NameProp->GetValue_InContainer(Target, &TargetName);
+		}
+
+		//UE_LOG(LogTemp, Log, TEXT("Target : %s"), *TargetName);
+
 		FVector2D Min, Max;
 		CalculateNDCMinMax(Target, Min, Max, false);
 
 		if (Min.X >= 1.0f || Min.Y >= 1.0f || Max.X <= -1.0f || Max.Y <= -1.0f)
 		{
+			//UE_LOG(LogTemp, Log, TEXT("Target was filtered because out of image Min : %s, Max : %s"), *Min.ToString(), *Max.ToString());
 			continue;
 		}
 
@@ -108,8 +120,9 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 
 		float ClippedSize = (Max - Min).X * (Max - Min).Y;
 
-		if (ClippedSize < OriginSize * (1.0f - TargetFilterRate))
+		if (ClippedSize < OriginSize * TargetFilterRate)
 		{
+			//UE_LOG(LogTemp, Log, TEXT("Target was filtered because lack of size OriginSize : %f, ClippedSize : %f"), OriginSize, ClippedSize);
 			continue;
 		}
 
@@ -138,6 +151,7 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 			NameProp->GetValue_InContainer(Target, &TargetAbsoulteName);
 		}
 
+		//UE_LOG(LogTemp, Log, TEXT("Target was successfully captured"));
 		LabelingText += FString::Printf(TEXT("%s,%d,%d,%d,%d\n"), *TargetAbsoulteName, MinX, MinY, MaxX - MinX, MaxY - MinY);
 	}
 	FFileHelper::SaveStringToFile(*LabelingText, *TextFilePath, FFileHelper::EEncodingOptions::ForceUTF8);
@@ -310,7 +324,6 @@ bool UDSCaptureComponent::ExportRenderTargetJPG(UTextureRenderTarget2D* TexRT, F
 void UDSCaptureComponent::LookTarget()
 {
 	FVector Direction = GetAttachParent()->GetComponentTransform().InverseTransformPosition(LookAtPos);
-	UE_LOG(LogTemp, Log, TEXT("Direction : %s"), *Direction.ToString());
 	if (Direction.IsZero())
 	{
 		Direction = FVector::ForwardVector;

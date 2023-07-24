@@ -420,7 +420,7 @@ void ADSDronePawn::ChangeDroneMode(EDroneMode InDroneMode)
 	bDroneOperation = DroneMode != EDroneMode::Setting && DroneMode != EDroneMode::TargetView;
 	//MeshComponent->SetVisibility(bBoolean);
 	CameraBoom->bDoCollisionTest = bDroneOperation;
-if (DroneMode == EDroneMode::Waypoint)
+	if (DroneMode == EDroneMode::Waypoint)
 	{
 		UDSSaveGame* DroneData = LoadGame();
 		if (WpActor->GetWaypoint().Points.Num() > 0)
@@ -430,7 +430,13 @@ if (DroneMode == EDroneMode::Waypoint)
 			CaptureComponent->SetLookAtPos(WpActor->GetWaypoint().Points[0].Location);
 		}
 	}
-	
+	else
+	{
+		if (CaptureComponent->GetTarget())
+		{
+			CaptureComponent->SetLookAtPos(CaptureComponent->GetTarget()->GetActorLocation());
+		}
+	}
 }
 
 EDroneMode ADSDronePawn::GetDroneMode()
