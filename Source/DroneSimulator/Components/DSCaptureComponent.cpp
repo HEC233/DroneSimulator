@@ -94,15 +94,24 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	for (const AActor* Target : Targets)
 	{
 		FVector2D Min, Max;
-		CalculateNDCMinMax(Target, Min, Max);
+		CalculateNDCMinMax(Target, Min, Max, false);
 
 		if (Min.X >= 1.0f || Min.Y >= 1.0f || Max.X <= -1.0f || Max.Y <= -1.0f)
 		{
 			continue;
 		}
 
+		float OriginSize = (Max - Min).X * (Max - Min).Y;
+
 		Min = FVector2D(FMath::Clamp(Min.X, -1, 1), FMath::Clamp(Min.Y, -1, 1));
 		Max = FVector2D(FMath::Clamp(Max.X, -1, 1), FMath::Clamp(Max.Y, -1, 1));
+
+		float ClippedSize = (Max - Min).X * (Max - Min).Y;
+
+		if (ClippedSize < OriginSize * (1.0f - TargetFilterRate))
+		{
+			continue;
+		}
 
 		Min = (Min / 2) + FVector2D(0.5f, 0.5f);
 		Max = (Max / 2) + FVector2D(0.5f, 0.5f);
@@ -176,6 +185,11 @@ void UDSCaptureComponent::SetZoomRate(float InZoomRate)
 	SetFinalFOV();
 }
 
+void UDSCaptureComponent::SetTargetFilterRate(float InRate)
+{
+	TargetFilterRate = FMath::Clamp(InRate, 0.0f, 1.0f);
+}
+
 FMatrix UDSCaptureComponent::GetViewProjection()
 {
 	FMatrix ViewProjectionMatrix = FMatrix::Identity;
@@ -193,7 +207,7 @@ FMatrix UDSCaptureComponent::GetViewProjection()
 	return ViewProjectionMatrix;
 }
 
-void UDSCaptureComponent::CalculateNDCMinMax(const AActor* Target, FVector2D& OutMin, FVector2D& OutMax)
+void UDSCaptureComponent::CalculateNDCMinMax(const AActor* Target, FVector2D& OutMin, FVector2D& OutMax, bool bFilterOutScreen)
 {
 	if (Target == nullptr)
 	{
@@ -239,17 +253,31 @@ void UDSCaptureComponent::CalculateNDCMinMax(const AActor* Target, FVector2D& Ou
 		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bds.Origin + Bds.BoxExtent * FVector(-1, -1, 1)));
 		Points.Add(MeshComp->GetRenderMatrix().TransformPosition(Bds.Origin + Bds.BoxExtent * FVector(-1, -1, -1)));
 
+		FVector2D InnerMin = FVector2D(TNumericLimits<double>::Max(), TNumericLimits<double>::Max());
+		FVector2D InnerMax = FVector2D(TNumericLimits<double>::Lowest(), TNumericLimits<double>::Lowest());
+
 		for (FVector& Point : Points)
 		{
 			FVector4 ClipCoordinate = ViewProjectionMatrix.TransformPosition(Point);
 			FVector2d NDCCoordinate = FVector2d(ClipCoordinate.X, ClipCoordinate.Y) / ClipCoordinate.W;
 
-			OutMin.X = FMath::Min(NDCCoordinate.X, OutMin.X);
-			OutMin.Y = FMath::Min(NDCCoordinate.Y, OutMin.Y);
+			InnerMin.X = FMath::Min(NDCCoordinate.X, InnerMin.X);
+			InnerMin.Y = FMath::Min(NDCCoordinate.Y, InnerMin.Y);
 
-			OutMax.X = FMath::Max(NDCCoordinate.X, OutMax.X);
-			OutMax.Y = FMath::Max(NDCCoordinate.Y, OutMax.Y);
+			InnerMax.X = FMath::Max(NDCCoordinate.X, InnerMax.X);
+			InnerMax.Y = FMath::Max(NDCCoordinate.Y, InnerMax.Y);
 		}
+
+		if (bFilterOutScreen && (InnerMin.X > 1.0f || InnerMin.Y > 1.0f || InnerMax.X < -1.0f || InnerMax.Y < -1.0f))
+		{
+			continue;
+		}
+
+		OutMin.X = FMath::Min(InnerMin.X, OutMin.X);
+		OutMin.Y = FMath::Min(InnerMin.Y, OutMin.Y);
+
+		OutMax.X = FMath::Max(InnerMax.X, OutMax.X);
+		OutMax.Y = FMath::Max(InnerMax.Y, OutMax.Y);
 	}
 
 	//OutMin.Y /= LocalPlayer->ViewportClient->Viewport->GetDesiredAspectRatio();

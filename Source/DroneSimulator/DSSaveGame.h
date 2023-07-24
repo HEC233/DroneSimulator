@@ -77,6 +77,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	TObjectPtr<AActor> CurrentTarget = nullptr;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+	float CurrentTargetFilterRate = 0.5f;
+
 	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	TArray<FWaypoint> WayPointArr;
 

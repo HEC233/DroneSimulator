@@ -268,6 +268,7 @@ void ADSDronePawn::ApplyLoadData()
 		AngleSpeed = DroneData->CurrentMoveSpeed / 60.0f;
 
 		CaptureSpeedPerSecond = DroneData->CurrentCaptureSpeed;
+		CaptureComponent->SetTargetFilterRate(DroneData->CurrentTargetFilterRate);
 		if (DroneMode == EDroneMode::Waypoint)
 		{
 			CaptureComponent->SetZoomRate(WpActor->GetWaypoint().ZoomRate);
