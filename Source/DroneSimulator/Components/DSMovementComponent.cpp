@@ -2,6 +2,7 @@
 
 
 #include "DSMovementComponent.h"
+#include "DroneSimulator/Pawns/DSDronePawn.h"
 
 // Sets default values for this component's properties
 UDSMovementComponent::UDSMovementComponent()
@@ -32,7 +33,11 @@ void UDSMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-
+	ADSDronePawn* Drone = Cast<ADSDronePawn>(GetOwner());
+	if (Drone)
+	{
+		DeltaTime = FMath::Max(0.001f, DeltaTime - Drone->GetCaptureSpan());
+	}
 	UpdateRotator(DeltaTime);
 }
 

@@ -120,6 +120,7 @@ void ADSDronePawn::Tick(float DeltaTime)
 	ApplyLoadData();
 
 	DeltaTime = FMath::Max(0.0f, DeltaTime - CaptureSpan);
+	UE_LOG(LogTemp, Log, TEXT("Pawn: %f"), DeltaTime)
 	CaptureSpan = 0.0f;
 	if (DeltaTime == 0.0f)
 	{
@@ -148,12 +149,11 @@ void ADSDronePawn::Tick(float DeltaTime)
 
 			if (TimeRecord >= 1.0f / CaptureSpeedPerSecond)
 			{
-				double StartTime = FPlatformTime::Seconds();
+				double StartTime = GetWorld()->TimeSeconds;
 				CaptureComponent->TakeScreenShot(CurrentCaptureCount);
-				double EndTime = FPlatformTime::Seconds();
+				double EndTime = GetWorld()->TimeSeconds;
 
 				CaptureSpan = EndTime - StartTime;
-				UE_LOG(LogTemp, Log, TEXT("Capturing Time : %f"), CaptureSpan);
 
 				TimeRecord -= 1.0f / CaptureSpeedPerSecond;
 				CurrentCaptureCount++;
@@ -451,4 +451,9 @@ void ADSDronePawn::GotoCurrentTarget()
 	{
 		SetActorLocation(DroneData->CurrentTarget->GetActorLocation());
 	}
+}
+
+float ADSDronePawn::GetCaptureSpan()
+{
+	return CaptureSpan;
 }

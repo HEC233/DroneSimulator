@@ -49,6 +49,7 @@ public:
 	EDroneMode GetDroneMode();
 	UFUNCTION(BlueprintCallable, Category = Capture)
 	void GotoCurrentTarget();
+	float GetCaptureSpan();
 
 protected:
 	void ProcessMouseInput(const FInputActionValue& Value);
