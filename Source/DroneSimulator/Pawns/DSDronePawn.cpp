@@ -257,8 +257,11 @@ void ADSDronePawn::ApplyLoadData()
 		if (DroneData->CurrentTarget != nullptr)
 		{
 			CenterPosition = DroneData->CurrentTarget->GetActorLocation() + FVector(0, 0, DroneData->CurrentHeight * 100.0f);
-
-			CaptureComponent->SetTarget(DroneData->CurrentTarget);
+			
+			if (CaptureComponent->GetTarget() != DroneData->CurrentTarget)
+			{
+				CaptureComponent->SetTarget(DroneData->CurrentTarget);
+			}
 		}
 
 		RotationRadius = DroneData->CurrentRadius * 100.0f;
@@ -293,24 +296,34 @@ void ADSDronePawn::MoveDroneWithWaypoint(float DeltaTime)
 	const FWaypoint& Wp = WpActor->GetWaypoint();
 	if (Wp.Points.IsEmpty()) return;
 
-	CaptureComponent->SetLookAtPos(Wp.Points[CurrentPointIndex].Location);
-	
 	const FVector Direction = Wp.Points[CurrentPointIndex].Location - GetActorLocation();
-	const float TargetLenght = Direction.Size();
-	
-	FVector NewPosition = GetActorLocation() + Direction.GetSafeNormal() * DroneSpeed * DeltaTime;
-	if (TargetLenght < DroneSpeed * DeltaTime)
+	if (!Direction.IsZero())
 	{
-		NewPosition = Wp.Points[CurrentPointIndex].Location;
+		const float TargetLenght = Direction.Size();
+		FVector NewPosition = GetActorLocation() + Direction.GetSafeNormal() * DroneSpeed * DeltaTime;
+		if (TargetLenght < DroneSpeed * DeltaTime)
+		{
+			NewPosition = Wp.Points[CurrentPointIndex].Location;
 
+			++CurrentPointIndex;
+			if (CurrentPointIndex >= Wp.Points.Num())
+			{
+				CurrentPointIndex = 0;
+			}
+			CaptureComponent->SetLookAtPos(Wp.Points[CurrentPointIndex].Location);
+		}
+		MoveComponent->MoveTo(NewPosition);
+	}
+	else
+	{
 		++CurrentPointIndex;
 		if (CurrentPointIndex >= Wp.Points.Num())
 		{
 			CurrentPointIndex = 0;
 		}
+		CaptureComponent->SetLookAtPos(Wp.Points[CurrentPointIndex].Location);
 	}
 	
-	MoveComponent->MoveTo(NewPosition);
 }
 
 void ADSDronePawn::MoveDroneWithInput(const FInputActionValue& Value)
@@ -413,6 +426,7 @@ if (DroneMode == EDroneMode::Waypoint)
 		{
 			SetActorLocation(WpActor->GetWaypoint().Points[0].Location);
 			CurrentPointIndex = 0;
+			CaptureComponent->SetLookAtPos(WpActor->GetWaypoint().Points[0].Location);
 		}
 	}
 	

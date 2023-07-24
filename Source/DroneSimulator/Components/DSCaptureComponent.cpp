@@ -203,7 +203,7 @@ void UDSCaptureComponent::CalculateNDCMinMax(const AActor* Target, FVector2D& Ou
 	}
 
 	OutMin = FVector2D(TNumericLimits<double>::Max(), TNumericLimits<double>::Max());
-	OutMax = FVector2D(TNumericLimits<double>::Min(), TNumericLimits<double>::Min());
+	OutMax = FVector2D(TNumericLimits<double>::Lowest(), TNumericLimits<double>::Lowest());
 
 	TArray<UStaticMeshComponent*> CapturingMeshComponents;
 	TArray<AActor*> AttachedActors;
