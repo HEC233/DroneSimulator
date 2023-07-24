@@ -282,32 +282,34 @@ bool UDSCaptureComponent::ExportRenderTargetJPG(UTextureRenderTarget2D* TexRT, F
 
 void UDSCaptureComponent::LookTarget()
 {
-	FVector Direction = LookAtPos - GetComponentLocation();
-	if (Direction.IsNearlyZero())
+	FVector Direction = GetAttachParent()->GetComponentTransform().InverseTransformPosition(LookAtPos);
+	UE_LOG(LogTemp, Log, TEXT("Direction : %s"), *Direction.ToString());
+	if (Direction.IsZero())
 	{
 		Direction = FVector::ForwardVector;
 	}
 	Direction.Normalize();
+	FVector LocalDirection = (Direction);
 
 	// This code does same thing below... but I didn't know that and did it myself...
 	//FRotator LookRotator = Direction.Rotation();
 
-	FVector XYDirection = FVector(Direction.X, Direction.Y, 0.f);
+	//FVector XYDirection = FVector(LocalDirection.X, LocalDirection.Y, 0.f);
 
-	// value of pitch angle cosine
-	float XYLength = XYDirection.Length();
-	XYDirection.Normalize();
+	//// value of pitch angle cosine
+	//float XYLength = XYDirection.Length();
+	//XYDirection.Normalize();
 
-	float PitchRad = FMath::Atan2(Direction.Z, XYLength);
-	float YawRad = FMath::Atan2(XYDirection.Y, XYDirection.X);
+	//float PitchRad = FMath::Atan2(LocalDirection.Z, XYLength);
+	//float YawRad = FMath::Atan2(XYDirection.Y, XYDirection.X);
 
-	float Pitch = FMath::RadiansToDegrees(PitchRad);
-	float Yaw = FMath::RadiansToDegrees(YawRad);
+	//float Pitch = FMath::RadiansToDegrees(PitchRad);
+	//float Yaw = FMath::RadiansToDegrees(YawRad);
 
 	//FRotator LookAtRotator = FLookFromMatrix(this->GetActorLocation(), Direction, FVector::UpVector).Rotator();
 	//FollowCamera->SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
 	//FollowCamera->SetWorldRotation(LookRotator);
-	SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
+	SetRelativeRotation(LocalDirection.Rotation());
 }
 
 void UDSCaptureComponent::SetFinalFOV()
