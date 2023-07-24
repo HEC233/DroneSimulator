@@ -19,6 +19,8 @@ UDSCaptureComponent::UDSCaptureComponent()
 	}
 
 	TargetFilteringName = FName(TEXT("NoTarget"));
+	bCaptureEveryFrame = false;
+	bAlwaysPersistRenderingState = true;
 }
 
 
@@ -35,6 +37,7 @@ void UDSCaptureComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	LookTarget();
+	CaptureScene();
 }
 
 void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
@@ -45,6 +48,7 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	}
 
 	LookTarget();
+	CaptureScene();
 	const FDateTime CurrentTime = FDateTime::Now();
 	const FString TimeString = CurrentTime.ToString(TEXT("%Y.%m.%d-%H.%M.%S"));
 
@@ -170,11 +174,6 @@ void UDSCaptureComponent::SetZoomRate(float InZoomRate)
 {
 	ZoomRate = InZoomRate;
 	SetFinalFOV();
-}
-
-void UDSCaptureComponent::SetCaptureTick(bool bValue)
-{
-	bCaptureEveryFrame = bValue;
 }
 
 FMatrix UDSCaptureComponent::GetViewProjection()

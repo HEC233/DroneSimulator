@@ -43,7 +43,6 @@ public:
 
 	void SetCameraFOV(float FOV);
 	void SetZoomRate(float InZoomRate);
-	void SetCaptureTick(bool bValue);
 
 protected:
 	FMatrix GetViewProjection();
