@@ -40,11 +40,11 @@ void UDSCaptureComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	CaptureScene();
 }
 
-void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
+bool UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 {
 	if (TextureTarget == nullptr || CaptureTargetActor == nullptr)
 	{
-		return;
+		return false;
 	}
 
 	LookTarget();
@@ -80,15 +80,6 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	FPaths::MakeStandardFilename(ImageFilePath);
 	FPaths::MakeStandardFilename(TextFilePath);
 
-
-	FArchive* RawFileWriterAr = IFileManager::Get().CreateFileWriter(*ImageFilePath);
-	if (RawFileWriterAr == nullptr)
-	{
-		//UE_LOG(LogTemp, Log, TEXT("Problem Occured"));
-		return;
-	}
-	bool ImageSavedOK = ExportRenderTargetJPG(TextureTarget, *RawFileWriterAr);
-	RawFileWriterAr->Close();
 	FString LabelingText;
 
 	//UE_LOG(LogTemp, Log, TEXT("==="));
@@ -123,7 +114,7 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 		if (ClippedSize < OriginSize * TargetFilterRate)
 		{
 			//UE_LOG(LogTemp, Log, TEXT("Target was filtered because lack of size OriginSize : %f, ClippedSize : %f"), OriginSize, ClippedSize);
-			continue;
+			return false;
 		}
 
 		Min = (Min / 2) + FVector2D(0.5f, 0.5f);
@@ -154,6 +145,16 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 		//UE_LOG(LogTemp, Log, TEXT("Target was successfully captured"));
 		LabelingText += FString::Printf(TEXT("%s,%d,%d,%d,%d\n"), *TargetAbsoulteName, MinX, MinY, MaxX - MinX, MaxY - MinY);
 	}
+
+	// Save to disk
+	FArchive* RawFileWriterAr = IFileManager::Get().CreateFileWriter(*ImageFilePath);
+	if (RawFileWriterAr == nullptr)
+	{
+		//UE_LOG(LogTemp, Log, TEXT("Problem Occured"));
+		return false;
+	}
+	bool ImageSavedOK = ExportRenderTargetJPG(TextureTarget, *RawFileWriterAr);
+	RawFileWriterAr->Close();
 	FFileHelper::SaveStringToFile(*LabelingText, *TextFilePath, FFileHelper::EEncodingOptions::ForceUTF8);
 
 	if (ImageSavedOK)
@@ -164,6 +165,7 @@ void UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	{
 		UE_LOG(LogTemp, Log, TEXT("Capture Save failed"));
 	}
+	return ImageSavedOK;
 }
 
 void UDSCaptureComponent::SetTarget(const AActor* TargetActor)

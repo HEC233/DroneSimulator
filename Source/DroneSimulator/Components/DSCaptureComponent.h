@@ -35,7 +35,7 @@ protected:
 	FVector LookAtPos;
 
 public:
-	void TakeScreenShot(int32 CaptureIndex = 0);
+	bool TakeScreenShot(int32 CaptureIndex = 0);
 	void SetTarget(const AActor* TargetActor);
 	const TObjectPtr<const AActor> GetTarget();
 	void SetLookAtPos(const FVector& Pos);
