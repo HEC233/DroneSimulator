@@ -325,7 +325,8 @@ bool UDSCaptureComponent::ExportRenderTargetJPG(UTextureRenderTarget2D* TexRT, F
 
 void UDSCaptureComponent::LookTarget()
 {
-	FVector Direction = GetAttachParent()->GetComponentTransform().InverseTransformPosition(LookAtPos);
+	//FVector Direction = GetAttachParent()->GetComponentTransform().InverseTransformPosition(LookAtPos);
+	FVector Direction = LookAtPos - GetComponentLocation();
 	if (Direction.IsZero())
 	{
 		Direction = FVector::ForwardVector;
@@ -351,7 +352,7 @@ void UDSCaptureComponent::LookTarget()
 	//FRotator LookAtRotator = FLookFromMatrix(this->GetActorLocation(), Direction, FVector::UpVector).Rotator();
 	//FollowCamera->SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
 	//FollowCamera->SetWorldRotation(LookRotator);
-	SetRelativeRotation(LocalDirection.Rotation());
+	SetRelativeRotation(GetAttachParent()->GetComponentTransform().InverseTransformRotation(LocalDirection.Rotation().Quaternion()));
 }
 
 void UDSCaptureComponent::SetFinalFOV()
