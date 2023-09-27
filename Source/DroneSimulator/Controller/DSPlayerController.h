@@ -40,6 +40,9 @@ public:
 
 	TArray<const AActor*> GetTargetsInVolume(const FConvexVolume& ConvexVolume);
 
+	UFUNCTION(BlueprintCallable, Category = "Logic")
+	bool SetTargetVisibility(const TSubclassOf<AActor> TargetClass, const bool Visiblity);
+
 protected:
 	UPROPERTY(BlueprintReadOnly)
 	UIStatus CurrentUI;
@@ -76,8 +79,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Logic")
 	TSubclassOf<AActor> TargetParent;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Logic")
 	TSet<TSubclassOf<AActor>> TargetClasses;
+	TMap<TSubclassOf<AActor>, bool> TargetVisiblity;
 
 	UPROPERTY(BlueprintReadOnly)
 	uint8 bPaused = false;

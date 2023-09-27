@@ -16,6 +16,11 @@ void ADSPlayerController::BeginPlay()
 	Super::BeginPlay();
 
 	SetShowMouseCursor(true);
+
+	for (TSubclassOf<AActor> TargetClass : TargetClasses)
+	{
+		TargetVisiblity.Add(TargetClass, true);
+	}
 }
 
 void ADSPlayerController::ChangeUI(UIStatus UI)
@@ -152,4 +157,24 @@ TArray<const AActor*> ADSPlayerController::GetTargetsInVolume(const FConvexVolum
 	}
 
 	return Result;
+}
+
+bool ADSPlayerController::SetTargetVisibility(const TSubclassOf<AActor> TargetClass, const bool Visiblity)
+{
+	if (!TargetVisiblity.Contains(TargetClass))
+	{
+		return false;
+	}
+
+	TArray<AActor*> Result;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), TargetClass, Result);
+
+	TargetVisiblity[TargetClass] = Visiblity;
+
+	for (AActor* Target : Result)
+	{
+		Target->SetActorHiddenInGame(!Visiblity);
+	}
+
+	return true;
 }
