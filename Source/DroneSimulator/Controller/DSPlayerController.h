@@ -76,6 +76,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Logic")
 	TSubclassOf<AActor> TargetParent;
 
+	UPROPERTY(EditAnywhere)
+	TSet<TSubclassOf<AActor>> TargetClasses;
+
 	UPROPERTY(BlueprintReadOnly)
 	uint8 bPaused = false;
 private:

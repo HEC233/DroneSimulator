@@ -110,6 +110,9 @@ void ADSDronePawn::BeginPlay()
 
 	CurrentCaptureCount = 0;
 	CurrentRotationRate = 0.0f;
+
+	BoomRotate = FRotator(-20.0f, 0.0f, 0.0f);
+	GetController()->SetControlRotation(BoomRotate);
 }
 
 // Called every frame
@@ -198,7 +201,7 @@ void ADSDronePawn::ProcessMouseInput(const FInputActionValue& Value)
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
 	BoomRotate.Yaw = BoomRotate.Yaw + LookAxisVector.X;
-	BoomRotate.Pitch = FMath::Clamp(BoomRotate.Pitch + LookAxisVector.Y, -80.0f, bDroneOperation ? 80.0f : -10.0f);
+	BoomRotate.Pitch = FMath::Clamp(BoomRotate.Pitch + LookAxisVector.Y, -80.0f, bDroneOperation ? 80.0f : 10.0f);
 
 	GetController()->SetControlRotation(BoomRotate);
 }

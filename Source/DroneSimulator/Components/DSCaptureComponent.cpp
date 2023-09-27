@@ -73,10 +73,18 @@ bool UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	if (NameProp)
 	{
 		NameProp->GetValue_InContainer(CaptureTargetActor, &TargetName);
+		
 	}
 
-	FString ImageFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%06d - %s Image - %s.jpg"), CaptureIndex, *TargetName, *TimeString));
-	FString TextFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%06d - %s Image - %s.txt"), CaptureIndex, *TargetName, *TimeString));
+	NameProp = CaptureTargetActor->GetClass()->FindPropertyByName(TEXT("TargetAbsoluteName"));
+	if (NameProp)
+	{
+		NameProp->GetValue_InContainer(CaptureTargetActor, &TargetAbsoulteName);
+	}
+
+
+	FString ImageFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%06d - %s - %s.jpg"), CaptureIndex, *TargetAbsoulteName, *TimeString));
+	FString TextFilePath = FPaths::Combine(FPlatformMisc::ProjectDir(), *FString::Printf(TEXT("Captures\\%06d - %s - %s.txt"), CaptureIndex, *TargetAbsoulteName, *TimeString));
 	FPaths::MakeStandardFilename(ImageFilePath);
 	FPaths::MakeStandardFilename(TextFilePath);
 
@@ -114,7 +122,8 @@ bool UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 		if (ClippedSize < OriginSize * TargetFilterRate)
 		{
 			//UE_LOG(LogTemp, Log, TEXT("Target was filtered because lack of size OriginSize : %f, ClippedSize : %f"), OriginSize, ClippedSize);
-			return false;
+			//return false;z
+			continue;
 		}
 
 		Min = (Min / 2) + FVector2D(0.5f, 0.5f);
@@ -155,7 +164,7 @@ bool UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 	}
 	bool ImageSavedOK = ExportRenderTargetJPG(TextureTarget, *RawFileWriterAr);
 	RawFileWriterAr->Close();
-	FFileHelper::SaveStringToFile(*LabelingText, *TextFilePath, FFileHelper::EEncodingOptions::ForceUTF8);
+	FFileHelper::SaveStringToFile(*LabelingText, *TextFilePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 
 	if (ImageSavedOK)
 	{
