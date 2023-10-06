@@ -5,7 +5,7 @@
 #include "Components/SceneCaptureComponent2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/Texture2D.h"
-#include "DroneSimulator/Controller/DSPlayerController.h"
+#include "Controller/DSPlayerController.h"
 #include "ImageUtils.h"
 
 UDSCaptureComponent::UDSCaptureComponent()

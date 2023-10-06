@@ -3,7 +3,7 @@
 
 #include "WaypointActor.h"
 #include "Kismet/GameplayStatics.h"
-#include "DroneSimulator/Save/WaypointSaveGame.h"
+#include "Save/WaypointSaveGame.h"
 #include "DSText3DActor.h"
 
 // Sets default values

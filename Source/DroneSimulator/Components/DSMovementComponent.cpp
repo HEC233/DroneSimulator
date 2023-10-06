@@ -2,7 +2,7 @@
 
 
 #include "DSMovementComponent.h"
-#include "DroneSimulator/Pawns/DSDronePawn.h"
+#include "Pawns/DSDronePawn.h"
 
 // Sets default values for this component's properties
 UDSMovementComponent::UDSMovementComponent()

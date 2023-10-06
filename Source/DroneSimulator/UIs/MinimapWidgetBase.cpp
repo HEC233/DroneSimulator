@@ -8,8 +8,8 @@
 #include "Components/CanvasPanelSlot.h" 
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "DroneSimulator/Actors/WaypointActor.h"
-#include "DroneSimulator/Save/WaypointSaveGame.h"
+#include "Actors/WaypointActor.h"
+#include "Save/WaypointSaveGame.h"
 
 void UMinimapWidgetBase::SetMinimapInfo(UTexture2D* Image, float ImageXCoord, float ImageYCoord, float ImageScale)
 {

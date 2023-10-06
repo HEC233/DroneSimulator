@@ -2,13 +2,21 @@
 
 #include "DSPlayerController.h"
 #include "Blueprint/UserWidget.h"
+#include "Actors/DSTarget.h"
 #include "Kismet/GameplayStatics.h"
-#include "DroneSimulator/UIs/MinimapWidgetBase.h"
+#include "UIs/MinimapWidgetBase.h"
+#include "UIs/DSWeaponToggleWidget.h"
 
 ADSPlayerController::ADSPlayerController()
 {
 	UIOnly.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
 	GameAndUI.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+
+	ConstructorHelpers::FClassFinder<UDSWeaponToggleWidget> BPWidget(TEXT("/Script/UMGEditor.WidgetBlueprint'/Game/UI/WBP_WeaponVisibleToggle.WBP_WeaponVisibleToggle_C'"));
+	if (BPWidget.Class)
+	{
+		ToggleWidget = BPWidget.Class;
+	}
 }
 
 void ADSPlayerController::BeginPlay()
@@ -17,10 +25,21 @@ void ADSPlayerController::BeginPlay()
 
 	SetShowMouseCursor(true);
 
-	for (TSubclassOf<AActor> TargetClass : TargetClasses)
+	for (TObjectIterator<ADSTarget> It; It; ++It)
 	{
-		TargetVisiblity.Add(TargetClass, true);
+		AllTargets.Add(*It);
+		if (TargetsByClass.Contains(It->GetClass()))
+		{
+			TargetsByClass[It->GetClass()].Targets.Add(*It);
+		}
+		else
+		{
+			TargetsByClass.Add(It->GetClass(), FArrayPacker(*It));
+			TargetVisibility.Add(It->GetClass(), true);
+		}
 	}
+
+	UE_LOG(LogTemp, Log, TEXT("Target Class Num : %d"), TargetsByClass.Num());
 }
 
 void ADSPlayerController::ChangeUI(UIStatus UI)
@@ -93,6 +112,24 @@ void ADSPlayerController::ChangeUI(UIStatus UI)
 	CurrentUI = UI;
 }
 
+TArray<UUserWidget*> ADSPlayerController::CreateAndGetVisibiltyToggleWidget()
+{
+	TArray<UUserWidget*> Ret;
+
+	for (auto& Target : TargetVisibility)
+	{
+		UDSWeaponToggleWidget* Widget = Cast<UDSWeaponToggleWidget>(CreateWidget(this, ToggleWidget, *FString::Printf(TEXT("%sToggle"), *Target.Key->GetDefaultObject()->GetFName().ToString())));
+
+		Widget->SetToggleState(Target.Value);
+		Widget->SetClass(Target.Key, Cast<ADSTarget>(TargetsByClass[Target.Key].Targets[0])->GetTargetAbsoluteName());
+		Widget->OnToggleChanged.BindUObject(this, &ADSPlayerController::SetTargetVisibility);
+
+		Ret.Add(Widget);
+	}
+
+	return Ret;
+}
+
 TArray<AActor*> ADSPlayerController::GetSortedTargetActors(AActor* PresetActor)
 {
 	PresetActor->GetAttachedActors(TargetArray);
@@ -159,19 +196,16 @@ TArray<const AActor*> ADSPlayerController::GetTargetsInVolume(const FConvexVolum
 	return Result;
 }
 
-bool ADSPlayerController::SetTargetVisibility(const TSubclassOf<AActor> TargetClass, const bool Visiblity)
+bool ADSPlayerController::SetTargetVisibility(const TSubclassOf<AActor>& TargetClass, bool Visiblity)
 {
-	if (!TargetVisiblity.Contains(TargetClass))
+	if (!TargetVisibility.Contains(TargetClass) || !TargetsByClass.Contains(TargetClass))
 	{
 		return false;
 	}
 
-	TArray<AActor*> Result;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), TargetClass, Result);
+	TargetVisibility[TargetClass] = Visiblity;
 
-	TargetVisiblity[TargetClass] = Visiblity;
-
-	for (AActor* Target : Result)
+	for (AActor* Target : TargetsByClass[TargetClass].Targets)
 	{
 		Target->SetActorHiddenInGame(!Visiblity);
 	}

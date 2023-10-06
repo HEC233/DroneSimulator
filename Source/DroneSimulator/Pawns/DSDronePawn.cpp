@@ -8,14 +8,13 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EngineUtils.h"
-#include "DroneSimulator/DSSaveGame.h"
+#include "DSSaveGame.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/LocalPlayer.h"
-#include "DroneSimulator/Actors/WaypointActor.h"
-#include "DroneSimulator/Save/WaypointSaveGame.h"
-
-#include "DroneSimulator/Components/DSMovementComponent.h"
-#include "DroneSimulator/Components/DSCaptureComponent.h"
+#include "Actors/WaypointActor.h"
+#include "Save/WaypointSaveGame.h"
+#include "Components/DSMovementComponent.h"
+#include "Components/DSCaptureComponent.h"
 
 // Sets default values
 ADSDronePawn::ADSDronePawn()

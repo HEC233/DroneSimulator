@@ -17,6 +17,17 @@ enum class UIStatus : uint8
 	Pause,
 };
 
+USTRUCT()
+struct FArrayPacker
+{
+	GENERATED_BODY()
+
+	FArrayPacker() {}
+	FArrayPacker(class ADSTarget* InitialElement) { Targets.Add(InitialElement); }
+
+	TArray<class ADSTarget*> Targets;
+};
+
 /**
  * 
  */
@@ -33,6 +44,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="UI")
 	void ChangeUI(UIStatus UI);
 
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	TArray<UUserWidget*> CreateAndGetVisibiltyToggleWidget();
+
 	UFUNCTION(BlueprintCallable, Category="Logic")
 	TArray<AActor*> GetSortedTargetActors(AActor* PresetActor);
 
@@ -41,7 +55,7 @@ public:
 	TArray<const AActor*> GetTargetsInVolume(const FConvexVolume& ConvexVolume);
 
 	UFUNCTION(BlueprintCallable, Category = "Logic")
-	bool SetTargetVisibility(const TSubclassOf<AActor> TargetClass, const bool Visiblity);
+	bool SetTargetVisibility(const TSubclassOf<AActor>& TargetClass, bool Visiblity);
 
 protected:
 	UPROPERTY(BlueprintReadOnly)
@@ -74,14 +88,15 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite)
 	TArray<AActor*> TargetArray;
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY()
 	TArray<AActor*> AllTargets;
-	UPROPERTY(EditAnywhere, Category = "Logic")
-	TSubclassOf<AActor> TargetParent;
 
 	UPROPERTY(EditAnywhere, Category = "Logic")
-	TSet<TSubclassOf<AActor>> TargetClasses;
-	TMap<TSubclassOf<AActor>, bool> TargetVisiblity;
+	TMap<TSubclassOf<AActor>, FArrayPacker> TargetsByClass;
+	TMap<TSubclassOf<AActor>, bool> TargetVisibility;
+
+	UPROPERTY()
+	TSubclassOf<class UDSWeaponToggleWidget> ToggleWidget;
 
 	UPROPERTY(BlueprintReadOnly)
 	uint8 bPaused = false;
