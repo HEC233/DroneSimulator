@@ -144,6 +144,10 @@ bool UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 		int32 MinY = FMath::FloorToInt(Min.Y);
 		int32 MaxX = FMath::CeilToInt(Max.X);
 		int32 MaxY = FMath::CeilToInt(Max.Y);
+		int32 Width = MaxX - MinX;
+		int32 Height = MaxY - MinY;
+		float Altitude = GetComponentLocation().Z - Target->GetActorLocation().Z;
+		float CameraAngle = -GetComponentRotation().Pitch;
 
 		NameProp = Target->GetClass()->FindPropertyByName(TEXT("TargetAbsoluteName"));
 		if (NameProp)
@@ -152,7 +156,7 @@ bool UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 		}
 
 		//UE_LOG(LogTemp, Log, TEXT("Target was successfully captured"));
-		LabelingText += FString::Printf(TEXT("%s,%d,%d,%d,%d\n"), *TargetAbsoulteName, MinX, MinY, MaxX - MinX, MaxY - MinY);
+		LabelingText += FString::Printf(TEXT("%s,%d,%d,%d,%d,%.2f,%.2f\n"), *TargetAbsoulteName, MinX, MinY, Width, Height, Altitude, CameraAngle);
 	}
 
 	// Save to disk
