@@ -6,6 +6,24 @@
 #include "GameFramework/Actor.h"
 #include "DSTarget.generated.h"
 
+UENUM(BlueprintType)
+enum class ETargetUIType : uint8
+{
+	Human = 0,
+	OneSlider,
+	TwoSlider,
+	TwoSliderAndOutrigger,
+	None
+};
+
+UENUM(BlueprintType)
+enum class ESliderAxis : uint8
+{
+	Roll,
+	Pitch,
+	Yaw
+};
+
 UCLASS()
 class DRONESIMULATOR_API ADSTarget : public AActor
 {
@@ -26,10 +44,48 @@ public:
 	FORCEINLINE FString GetTargetName() { return TargetName; }
 	FORCEINLINE FString GetTargetAbsoluteName() { return TargetAbsoluteName; }
 
+public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Setting)
+	ETargetUIType UIType;
+
+public:
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void UpdateState();
+	virtual void UpdateState_Implementation();
+
 protected:
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Setting)
 	FString TargetName;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Setting)
 	FString TargetAbsoluteName;
+
+	UPROPERTY(BlueprintReadWrite, Category = Setting)
+	int32 Pose;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Setting)
+	float Slider1Value;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Setting)
+	float Slider1Max;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Setting)
+	float Slider1Min;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Setting)
+	float Slider2Value;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Setting)
+	float Slider2Max;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Setting)
+	float Slider2Min;
+
+	UPROPERTY(BlueprintReadWrite, Category = Setting)
+	uint8 bOutriggerSet : 1;
+
+	UPROPERTY()
+	TObjectPtr<USceneComponent> Slider1Object;
+	UPROPERTY()
+	TObjectPtr<USceneComponent> Slider2Object;
+	UPROPERTY(EditDefaultsOnly, Category = Setting)
+	ESliderAxis Slider1Axis;
+	UPROPERTY(EditDefaultsOnly, Category = Setting)
+	ESliderAxis Slider2Axis;
 };
