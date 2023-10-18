@@ -219,6 +219,16 @@ void UDSCaptureComponent::SetTargetFilterRate(float InRate)
 	TargetFilterRate = FMath::Clamp(InRate, 0.0f, 1.0f);
 }
 
+void UDSCaptureComponent::SetAdditionalAngle(float InAngle)
+{
+	AdditionalAngle = InAngle;
+}
+
+const float UDSCaptureComponent::GetAdditionalAngle()
+{
+	return AdditionalAngle;
+}
+
 FMatrix UDSCaptureComponent::GetViewProjection()
 {
 	FMatrix ViewProjectionMatrix = FMatrix::Identity;
@@ -365,7 +375,7 @@ void UDSCaptureComponent::LookTarget()
 	//FRotator LookAtRotator = FLookFromMatrix(this->GetActorLocation(), Direction, FVector::UpVector).Rotator();
 	//FollowCamera->SetWorldRotation(FRotator(Pitch, Yaw, 0.0f));
 	//FollowCamera->SetWorldRotation(LookRotator);
-	SetRelativeRotation(GetAttachParent()->GetComponentTransform().InverseTransformRotation(LocalDirection.Rotation().Quaternion()));
+	SetRelativeRotation(GetAttachParent()->GetComponentTransform().InverseTransformRotation((LocalDirection.Rotation() + FRotator(AdditionalAngle, 0.0f, 0.0f)).Quaternion()));
 }
 
 void UDSCaptureComponent::SetFinalFOV()

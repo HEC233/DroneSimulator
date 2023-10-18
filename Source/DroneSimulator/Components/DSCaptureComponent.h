@@ -44,6 +44,8 @@ public:
 	void SetCameraFOV(float FOV);
 	void SetZoomRate(float InZoomRate);
 	void SetTargetFilterRate(float InRate);
+	void SetAdditionalAngle(float InAngle);
+	const float GetAdditionalAngle();
 
 protected:
 	FMatrix GetViewProjection();
@@ -61,4 +63,5 @@ private:
 	float CurrentFOV = 60.0f;
 	float ZoomRate = 1.0f;
 	float TargetFilterRate = 0.5f;
+	float AdditionalAngle = 0.0f;
 };

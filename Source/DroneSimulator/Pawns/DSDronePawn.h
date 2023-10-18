@@ -91,6 +91,8 @@ protected:
 	TObjectPtr<class UInputAction> DroneCameraZoomAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> DroneSpeedChangeAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputAction> DroneAngleChangeAction;
 
 	// Properties
 private:
@@ -163,6 +165,7 @@ private:
 	void DroneAltitudeInput(const FInputActionValue& Value);
 	void CameraZoomInput(const FInputActionValue& Value);
 	void DroneSpeedChange(const FInputActionValue& Value);
+	void DroneAngleChange(const FInputActionValue& Value);
 
 	void UpdateDroneSpeed();
 

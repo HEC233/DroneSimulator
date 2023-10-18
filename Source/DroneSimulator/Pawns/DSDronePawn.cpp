@@ -60,6 +60,11 @@ ADSDronePawn::ADSDronePawn()
 	{
 		DroneSpeedChangeAction = InputDroneSpeedChangeAction.Object;
 	}
+	static ConstructorHelpers::FObjectFinder<UInputAction> InputDroneAngleChangeAction(TEXT("/Script/EnhancedInput.InputAction'/Game/DroneSimulator/Input/IA_ChangeCameraAngle.IA_ChangeCameraAngle'"));
+	if (InputDroneAngleChangeAction.Object)
+	{
+		DroneAngleChangeAction = InputDroneAngleChangeAction.Object;
+	}
 
 	static ConstructorHelpers::FObjectFinder<UInputMappingContext> InputMappingContextRef(TEXT("/Script/EnhancedInput.InputMappingContext'/Game/DroneSimulator/Input/IMC_Default.IMC_Default'"));
 	if (InputMappingContextRef.Object)
@@ -193,6 +198,7 @@ void ADSDronePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	EnhancedInputComponent->BindAction(DroneAltitudeAction, ETriggerEvent::Triggered, this, &ADSDronePawn::DroneAltitudeInput);
 	EnhancedInputComponent->BindAction(DroneCameraZoomAction, ETriggerEvent::Triggered, this, &ADSDronePawn::CameraZoomInput);
 	EnhancedInputComponent->BindAction(DroneSpeedChangeAction, ETriggerEvent::Started, this, &ADSDronePawn::DroneSpeedChange);
+	EnhancedInputComponent->BindAction(DroneAngleChangeAction, ETriggerEvent::Triggered, this, &ADSDronePawn::DroneAngleChange);
 }
 
 void ADSDronePawn::ProcessMouseInput(const FInputActionValue& Value)
@@ -380,6 +386,25 @@ void ADSDronePawn::DroneSpeedChange(const FInputActionValue& Value)
 	DroneSpeed = DroneSpeedArray[DroneSpeedIndex];
 }
 
+void ADSDronePawn::DroneAngleChange(const FInputActionValue& Value)
+{
+	if (DroneMode != EDroneMode::AutoPilot && DroneMode != EDroneMode::Waypoint)
+	{
+		return;
+	}
+
+	float Input = Value.Get<float>();
+
+	if (Input > 0)
+	{
+		CaptureComponent->SetAdditionalAngle(FMath::Min(20.0f, CaptureComponent->GetAdditionalAngle() + 20.0f * GetWorld()->GetDeltaSeconds()));
+	}
+	else if (Input < 0)
+	{
+		CaptureComponent->SetAdditionalAngle(FMath::Max(-80.0f, CaptureComponent->GetAdditionalAngle() - 20.0f * GetWorld()->GetDeltaSeconds()));
+	}
+}
+
 void ADSDronePawn::UpdateDroneSpeed()
 {
 	float Diameter = RotationRadius * 2.0f * PI;
@@ -424,6 +449,7 @@ void ADSDronePawn::ChangeDroneMode(EDroneMode InDroneMode)
 	bDroneOperation = DroneMode != EDroneMode::Setting && DroneMode != EDroneMode::TargetView;
 	//MeshComponent->SetVisibility(bBoolean);
 	CameraBoom->bDoCollisionTest = bDroneOperation;
+	CaptureComponent->SetAdditionalAngle(0);
 	if (DroneMode == EDroneMode::Waypoint)
 	{
 		UDSSaveGame* DroneData = LoadGame();
