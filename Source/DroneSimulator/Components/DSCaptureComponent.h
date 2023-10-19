@@ -47,11 +47,15 @@ public:
 	void SetAdditionalAngle(float InAngle);
 	const float GetAdditionalAngle();
 
+	const TArray<FVector4>& GetTargetCoordinated();
+
 protected:
 	FMatrix GetViewProjection();
 
 private:
 	void CalculateNDCMinMax(const AActor* Target, FVector2D& OutMin, FVector2D& OutMax, bool bFilterOutScreen);
+	void ConvertNDC2ImageCoord(const FVector2D& InMin, const FVector2D& InMax, FIntVector2& OutMin, FIntVector2& OutMax);
+	bool CheckTargetCoordInvalid(const FVector2D& InMin, const FVector2D& InMax);
 	bool ExportRenderTargetJPG(class UTextureRenderTarget2D* TexRT, FArchive& Ar);
 	void LookTarget();
 
@@ -64,4 +68,6 @@ private:
 	float ZoomRate = 1.0f;
 	float TargetFilterRate = 0.5f;
 	float AdditionalAngle = 0.0f;
+
+	TArray<FVector4> TargetCoordinatesBuffer;
 };

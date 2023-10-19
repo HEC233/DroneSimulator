@@ -106,46 +106,16 @@ bool UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 		FVector2D Min, Max;
 		CalculateNDCMinMax(Target, Min, Max, false);
 
-		if (Min.X >= 1.0f || Min.Y >= 1.0f || Max.X <= -1.0f || Max.Y <= -1.0f)
+		if (!CheckTargetCoordInvalid(Min, Max))
 		{
-			//UE_LOG(LogTemp, Log, TEXT("Target was filtered because out of image Min : %s, Max : %s"), *Min.ToString(), *Max.ToString());
 			continue;
 		}
 
-		float OriginSize = (Max - Min).X * (Max - Min).Y;
+		FIntVector2 ImageMin, ImageMax;
+		ConvertNDC2ImageCoord(Min, Max, ImageMin, ImageMax);
 
-		Min = FVector2D(FMath::Clamp(Min.X, -1, 1), FMath::Clamp(Min.Y, -1, 1));
-		Max = FVector2D(FMath::Clamp(Max.X, -1, 1), FMath::Clamp(Max.Y, -1, 1));
-
-		float ClippedSize = (Max - Min).X * (Max - Min).Y;
-
-		if (ClippedSize < OriginSize * TargetFilterRate)
-		{
-			//UE_LOG(LogTemp, Log, TEXT("Target was filtered because lack of size OriginSize : %f, ClippedSize : %f"), OriginSize, ClippedSize);
-			//return false;z
-			continue;
-		}
-
-		Min = (Min / 2) + FVector2D(0.5f, 0.5f);
-		Max = (Max / 2) + FVector2D(0.5f, 0.5f);
-
-		Min.X *= TextureTarget->SizeX;
-		Max.X *= TextureTarget->SizeX;
-		Min.Y *= TextureTarget->SizeY;
-		Max.Y *= TextureTarget->SizeY;
-		Min.Y = TextureTarget->SizeY - Min.Y;
-		Max.Y = TextureTarget->SizeY - Max.Y;
-
-		float SwapTemp = Min.Y;
-		Min.Y = Max.Y;
-		Max.Y = SwapTemp;
-
-		int32 MinX = FMath::FloorToInt(Min.X);
-		int32 MinY = FMath::FloorToInt(Min.Y);
-		int32 MaxX = FMath::CeilToInt(Max.X);
-		int32 MaxY = FMath::CeilToInt(Max.Y);
-		int32 Width = MaxX - MinX;
-		int32 Height = MaxY - MinY;
+		int32 Width = ImageMax.X - ImageMin.X;
+		int32 Height = ImageMax.Y - ImageMin.Y;
 		float Altitude = GetComponentLocation().Z - Target->GetActorLocation().Z;
 		float CameraAngle = -GetComponentRotation().Pitch;
 
@@ -156,7 +126,7 @@ bool UDSCaptureComponent::TakeScreenShot(int32 CaptureIndex)
 		}
 
 		//UE_LOG(LogTemp, Log, TEXT("Target was successfully captured"));
-		LabelingText += FString::Printf(TEXT("%s,%d,%d,%d,%d,%.2f,%.2f\n"), *TargetAbsoulteName, MinX, MinY, Width, Height, Altitude, CameraAngle);
+		LabelingText += FString::Printf(TEXT("%s,%d,%d,%d,%d,%.2f,%.2f\n"), *TargetAbsoulteName, ImageMin.X, ImageMin.Y, Width, Height, Altitude, CameraAngle);
 	}
 
 	// Save to disk
@@ -227,6 +197,40 @@ void UDSCaptureComponent::SetAdditionalAngle(float InAngle)
 const float UDSCaptureComponent::GetAdditionalAngle()
 {
 	return AdditionalAngle;
+}
+
+const TArray<FVector4>& UDSCaptureComponent::GetTargetCoordinated()
+{
+	TArray<const AActor*> Targets;
+
+	ADSPlayerController* PC = Cast<ADSPlayerController>(GetWorld()->GetFirstPlayerController());
+	if (PC)
+	{
+		FConvexVolume Volume;
+		GetViewFrustumBounds(Volume, GetViewProjection(), false);
+		Targets.Append(PC->GetTargetsInVolume(Volume));
+	}
+	else
+	{
+		Targets.Add(CaptureTargetActor);
+	}
+
+	TargetCoordinatesBuffer.Empty(Targets.Num());
+
+	for (const AActor* Target : Targets)
+	{
+		FVector2D Min, Max;
+		CalculateNDCMinMax(Target, Min, Max, false);
+
+		if (!CheckTargetCoordInvalid(Min, Max))
+		{
+			continue;
+		}
+
+		TargetCoordinatesBuffer.Emplace(FVector4(FMath::Max(-1.0, Min.X), FMath::Max(-1.0, Min.Y), FMath::Min(1.0, Max.X), FMath::Min(1.0, Max.Y)));
+	}
+
+	return TargetCoordinatesBuffer;
 }
 
 FMatrix UDSCaptureComponent::GetViewProjection()
@@ -321,6 +325,51 @@ void UDSCaptureComponent::CalculateNDCMinMax(const AActor* Target, FVector2D& Ou
 
 	//OutMin.Y /= LocalPlayer->ViewportClient->Viewport->GetDesiredAspectRatio();
 	//OutMax.Y /= LocalPlayer->ViewportClient->Viewport->GetDesiredAspectRatio();
+}
+
+void UDSCaptureComponent::ConvertNDC2ImageCoord(const FVector2D& InMin, const FVector2D& InMax, FIntVector2& OutMin, FIntVector2& OutMax)
+{
+	FVector2D Min;
+	FVector2D Max;
+	Min = (InMin / 2) + FVector2D(0.5f, 0.5f);
+	Max = (InMax / 2) + FVector2D(0.5f, 0.5f);
+
+	Min.X *= TextureTarget->SizeX;
+	Max.X *= TextureTarget->SizeX;
+	Min.Y *= TextureTarget->SizeY;
+	Max.Y *= TextureTarget->SizeY;
+	Min.Y = TextureTarget->SizeY - Min.Y;
+	Max.Y = TextureTarget->SizeY - Max.Y;
+
+	float SwapTemp = Min.Y;
+	Min.Y = Max.Y;
+	Max.Y = SwapTemp;
+
+	OutMin.X = FMath::FloorToInt(Min.X);
+	OutMin.Y = FMath::FloorToInt(Min.Y);
+	OutMax.X = FMath::CeilToInt(Max.X);
+	OutMax.Y = FMath::CeilToInt(Max.Y);
+}
+
+bool UDSCaptureComponent::CheckTargetCoordInvalid(const FVector2D& InMin, const FVector2D& InMax)
+{
+	if (InMin.X >= 1.0f || InMin.Y >= 1.0f || InMax.X <= -1.0f || InMax.Y <= -1.0f)
+	{
+		return false;
+	}
+
+	float OriginSize = (InMax - InMin).X * (InMax - InMin).Y;
+
+	FVector2D Min = FVector2D(FMath::Clamp(InMin.X, -1, 1), FMath::Clamp(InMin.Y, -1, 1));
+	FVector2D Max = FVector2D(FMath::Clamp(InMax.X, -1, 1), FMath::Clamp(InMax.Y, -1, 1));
+
+	float ClippedSize = (Max - Min).X * (Max - Min).Y;
+
+	if (ClippedSize < OriginSize * TargetFilterRate)
+	{
+		return false;
+	}
+	return true;
 }
 
 bool UDSCaptureComponent::ExportRenderTargetJPG(UTextureRenderTarget2D* TexRT, FArchive& Ar)
