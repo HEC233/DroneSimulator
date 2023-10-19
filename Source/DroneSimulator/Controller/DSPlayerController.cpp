@@ -183,6 +183,11 @@ TArray<const AActor*> ADSPlayerController::GetTargetsInVolume(const FConvexVolum
 
 	for (const AActor* Target : AllTargets)
 	{
+		if (Target->IsHidden())
+		{
+			continue;
+		}
+
 		FVector Origin;
 		FVector Extent;
 		Target->GetActorBounds(true, Origin, Extent, true);
