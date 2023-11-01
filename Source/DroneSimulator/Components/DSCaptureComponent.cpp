@@ -238,7 +238,7 @@ FMatrix UDSCaptureComponent::GetViewProjection()
 	FMatrix ViewProjectionMatrix = FMatrix::Identity;
 	FMinimalViewInfo ViewInfo;
 	GetCameraView(0.0f, ViewInfo);
-	ViewInfo.AspectRatio = TextureTarget->SizeX / TextureTarget->SizeY;
+	ViewInfo.AspectRatio = static_cast<float>(TextureTarget->SizeX) / TextureTarget->SizeY;
 	const FMatrix ViewMatrix = FTranslationMatrix(-GetComponentLocation()) * FInverseRotationMatrix(GetComponentRotation()) * FMatrix(
 		FPlane(0, 0, 1, 0),
 		FPlane(1, 0, 0, 0),

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/Texture2D.h"
+#include "Actors/DSTarget.h"
 #include "DSPlayerController.generated.h"
 
 UENUM(BlueprintType)
@@ -45,11 +46,10 @@ public:
 	void ChangeUI(UIStatus UI);
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	TArray<UUserWidget*> CreateAndGetVisibiltyToggleWidget();
+	TArray<UUserWidget*> CreateAndGetVisibiltyToggleWidget(ETargetUsageType TargetType);
 
 	UFUNCTION(BlueprintCallable, Category="Logic")
 	TArray<AActor*> GetSortedTargetActors(AActor* PresetActor);
-
 	void SetPauseUI(bool bPause);
 
 	TArray<const AActor*> GetTargetsInVolume(const FConvexVolume& ConvexVolume);
@@ -93,6 +93,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Logic")
 	TMap<TSubclassOf<AActor>, FArrayPacker> TargetsByClass;
+	UPROPERTY(BlueprintReadOnly, Category = "Logic")
 	TMap<TSubclassOf<AActor>, bool> TargetVisibility;
 
 	UPROPERTY()

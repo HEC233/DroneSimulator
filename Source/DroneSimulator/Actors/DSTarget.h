@@ -24,6 +24,14 @@ enum class ESliderAxis : uint8
 	Yaw
 };
 
+UENUM(BlueprintType)
+enum class ETargetUsageType : uint8
+{
+	None = 0,
+	YukHangSa = 1,
+	AIPower = 2,
+};
+
 UCLASS()
 class DRONESIMULATOR_API ADSTarget : public AActor
 {
@@ -52,6 +60,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void UpdateState();
 	virtual void UpdateState_Implementation();
+	FORCEINLINE ETargetUsageType GetUsageType() { return UsageType; }
 
 protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Setting)
@@ -88,4 +97,6 @@ protected:
 	ESliderAxis Slider1Axis;
 	UPROPERTY(EditDefaultsOnly, Category = Setting)
 	ESliderAxis Slider2Axis;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Setting)
+	ETargetUsageType UsageType;
 };

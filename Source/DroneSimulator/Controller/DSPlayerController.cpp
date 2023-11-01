@@ -112,16 +112,23 @@ void ADSPlayerController::ChangeUI(UIStatus UI)
 	CurrentUI = UI;
 }
 
-TArray<UUserWidget*> ADSPlayerController::CreateAndGetVisibiltyToggleWidget()
+TArray<UUserWidget*> ADSPlayerController::CreateAndGetVisibiltyToggleWidget(ETargetUsageType TargetType = ETargetUsageType::None)
 {
 	TArray<UUserWidget*> Ret;
 
 	for (auto& Target : TargetVisibility)
 	{
+		ADSTarget* TargetObject = Cast<ADSTarget>(TargetsByClass[Target.Key].Targets[0]);
+		ETargetUsageType UsageType = TargetObject->GetUsageType();
+		if (TargetType != ETargetUsageType::None && UsageType != TargetType)
+		{
+			continue;
+		}
+
 		UDSWeaponToggleWidget* Widget = Cast<UDSWeaponToggleWidget>(CreateWidget(this, ToggleWidget, *FString::Printf(TEXT("%sToggle"), *Target.Key->GetDefaultObject()->GetFName().ToString())));
 
 		Widget->SetToggleState(Target.Value);
-		Widget->SetClass(Target.Key, Cast<ADSTarget>(TargetsByClass[Target.Key].Targets[0])->GetTargetAbsoluteName());
+		Widget->SetClass(Target.Key, TargetObject->GetTargetAbsoluteName());
 		Widget->OnToggleChanged.BindUObject(this, &ADSPlayerController::SetTargetVisibility);
 
 		Ret.Add(Widget);
@@ -133,8 +140,10 @@ TArray<UUserWidget*> ADSPlayerController::CreateAndGetVisibiltyToggleWidget()
 TArray<AActor*> ADSPlayerController::GetSortedTargetActors(AActor* PresetActor)
 {
 	PresetActor->GetAttachedActors(TargetArray);
+
 	for (int32 Index = 0; Index < TargetArray.Num(); ++Index)
 	{
+		ADSTarget* Target = Cast<ADSTarget>(TargetArray[Index]);
 		FProperty* NameProp = TargetArray[Index]->GetClass()->FindPropertyByName(TEXT("TargetName"));
 		if (NameProp == nullptr)
 		{
